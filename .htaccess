@@ -1,0 +1,12 @@
+# SRSMS - Root .htaccess
+
+# Protect sensitive folders from direct browsing
+Options -Indexes
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+</IfModule>
+
+# Default document
+DirectoryIndex index.html
