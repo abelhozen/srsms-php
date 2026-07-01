@@ -5,7 +5,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['super_admin', 'owner', 'manager', 'store_keeper', 'cashier', 'accountant', 'auditor']);
+$user = requireRole(['super_admin', 'admin', 'owner', 'manager', 'store_keeper', 'cashier', 'accountant', 'auditor']);
 $pdo = getDB();
 
 $id = $_GET['id'] ?? null;
@@ -40,7 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-    requireRole(['super_admin', 'manager', 'store_keeper']);
+    $user = requireRole(['super_admin', 'admin', 'owner', 'manager', 'store_keeper', 'cashier', 'accountant', 'auditor']);
+    $stmt = $pdo->prepare("SELECT created_by FROM products WHERE id = ?");
+    $stmt->execute([$id]);
+    $productOwner = $stmt->fetch();
+    $canManage = in_array($user['role'], ['super_admin', 'owner']) || ($productOwner && (int)$productOwner['created_by'] === (int)$user['id']);
+    if (!$canManage) {
+        jsonError('You are not allowed to edit this product', 403);
+    }
+
     $body = getJsonBody();
     $name = bodyValue($body, 'name');
     $categoryId = bodyValue($body, 'categoryId');
@@ -62,6 +70,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 
     logAudit($user['id'], 'PRODUCT_UPDATED', 'inventory', "Updated product #$id");
     jsonSuccess(['message' => 'Product updated']);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $user = requireRole(['super_admin', 'admin', 'owner', 'manager', 'store_keeper', 'cashier', 'accountant', 'auditor']);
+    $stmt = $pdo->prepare("SELECT created_by FROM products WHERE id = ?");
+    $stmt->execute([$id]);
+    $productOwner = $stmt->fetch();
+    $canManage = in_array($user['role'], ['super_admin', 'owner']) || ($productOwner && (int)$productOwner['created_by'] === (int)$user['id']);
+    if (!$canManage) {
+        jsonError('You are not allowed to delete this product', 403);
+    }
+
+    $stmt = $pdo->prepare("UPDATE products SET status = 'inactive' WHERE id = ?");
+    $stmt->execute([$id]);
+
+    logAudit($user['id'], 'PRODUCT_DELETED', 'inventory', "Deactivated product #$id");
+    jsonSuccess(['message' => 'Product deactivated']);
 }
 
 jsonError('Method not allowed', 405);

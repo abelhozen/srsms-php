@@ -3,9 +3,10 @@
    ============================================================ */
 
 async function renderUsersPage(container) {
+    const canManageUsers = ['super_admin', 'owner'].includes(Store.user.role);
     container.innerHTML = `
         <div style="display:flex; justify-content:flex-end; margin-bottom:18px;">
-            <button class="btn btn-dark" onclick="openCreateUserModal()">+ Add User</button>
+            ${canManageUsers ? '<button class="btn btn-dark" onclick="openCreateUserModal()">+ Add User</button>' : ''}
         </div>
         <div class="card">
             <div class="card-body" style="padding:0;" id="usersTableHolder">
@@ -18,7 +19,7 @@ async function renderUsersPage(container) {
 
 async function loadUsersTable() {
     const holder = document.getElementById('usersTableHolder');
-    const isSuperAdmin = Store.user.role === 'super_admin';
+    const canManageUsers = ['super_admin', 'owner'].includes(Store.user.role);
     try {
         const res = await Api.listUsers();
         const users = res.users;
@@ -34,9 +35,11 @@ async function loadUsersTable() {
                             <td>${statusBadge(u.status)}</td>
                             <td>${u.last_login_at ? formatDateTime(u.last_login_at) : 'Never'}</td>
                             <td style="white-space:nowrap;">
-                                <button class="btn btn-outline btn-sm" onclick="openEditUserModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}', '${escapeHtml(u.email||'')}', '${escapeHtml(u.phone||'')}', ${u.role_id}, '${u.status}')">Edit</button>
-                                <button class="btn btn-outline btn-sm" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}')">Reset PW</button>
-                                ${isSuperAdmin && u.role_name !== 'super_admin' ? `<button class="btn btn-danger btn-sm" onclick="handleDisableUser(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}')">Disable</button>` : ''}
+                                ${canManageUsers ? `
+                                    <button class="btn btn-outline btn-sm" onclick="openEditUserModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}', '${escapeHtml(u.email||'')}', '${escapeHtml(u.phone||'')}', ${u.role_id}, '${u.status}')"><i class="fa-solid fa-pen"></i></button>
+                                    <button class="btn btn-outline btn-sm" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}')"><i class="fa-solid fa-key"></i></button>
+                                    ${u.id !== Store.user.id ? `<button class="btn btn-danger btn-sm" onclick="handleDisableUser(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}')"><i class="fa-solid fa-user-slash"></i></button>` : ''}
+                                ` : '<span class="badge badge-gray">Read only</span>'}
                             </td>
                         </tr>
                     `).join('')}
@@ -48,9 +51,21 @@ async function loadUsersTable() {
     }
 }
 
+function ensureUserManagementAccess() {
+    if (!['super_admin', 'owner'].includes(Store.user.role)) {
+        showError('Only Admin and Owner can manage users.');
+        return false;
+    }
+    return true;
+}
+
 async function openCreateUserModal() {
+    if (!ensureUserManagementAccess()) return;
     let roles = [];
     try { roles = (await Api.listRoles()).roles; } catch { /* ignore */ }
+
+    // allow only Admin (super_admin) and Owner roles in the UI
+    roles = (roles || []).filter(r => r.name === 'super_admin' || r.name === 'owner');
 
     openModal(`
         <div class="modal">
@@ -61,7 +76,7 @@ async function openCreateUserModal() {
                     <div class="form-group"><label>Username</label><input type="text" id="nuUsername" /></div>
                     <div class="form-group"><label>Role</label>
                         <select id="nuRole">
-                            ${roles.map(r => `<option value="${r.id}">${escapeHtml(r.label)}</option>`).join('')}
+                            ${roles.map(r => `<option value="${r.id}">${escapeHtml(r.name === 'super_admin' ? 'Admin' : r.label)}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -80,6 +95,7 @@ async function openCreateUserModal() {
 }
 
 async function submitCreateUser() {
+    if (!ensureUserManagementAccess()) return;
     const fullName = document.getElementById('nuFullName').value.trim();
     const username = document.getElementById('nuUsername').value.trim();
     const roleId = document.getElementById('nuRole').value;
@@ -100,9 +116,11 @@ async function submitCreateUser() {
 }
 
 async function openEditUserModal(id, fullName, email, phone, roleId, status) {
+    if (!ensureUserManagementAccess()) return;
     let roles = [];
     try { roles = (await Api.listRoles()).roles; } catch { /* ignore */ }
-
+    // restrict to Admin and Owner
+    roles = (roles || []).filter(r => r.name === 'super_admin' || r.name === 'owner');
     openModal(`
         <div class="modal">
             <div class="modal-header"><h3>Edit User</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -115,7 +133,7 @@ async function openEditUserModal(id, fullName, email, phone, roleId, status) {
                 <div class="form-row">
                     <div class="form-group"><label>Role</label>
                         <select id="euRole">
-                            ${roles.map(r => `<option value="${r.id}" ${r.id === roleId ? 'selected' : ''}>${escapeHtml(r.label)}</option>`).join('')}
+                            ${roles.map(r => `<option value="${r.id}" ${r.id === roleId ? 'selected' : ''}>${escapeHtml(r.name === 'super_admin' ? 'Admin' : r.label)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group"><label>Status</label>
@@ -136,6 +154,7 @@ async function openEditUserModal(id, fullName, email, phone, roleId, status) {
 }
 
 async function submitEditUser(id) {
+    if (!ensureUserManagementAccess()) return;
     try {
         await Api.updateUser(id, {
             fullName: document.getElementById('euFullName').value.trim(),
@@ -153,6 +172,7 @@ async function submitEditUser(id) {
 }
 
 function openResetPasswordModal(id, fullName) {
+    if (!ensureUserManagementAccess()) return;
     openModal(`
         <div class="modal">
             <div class="modal-header"><h3>Reset Password — ${escapeHtml(fullName)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -168,6 +188,7 @@ function openResetPasswordModal(id, fullName) {
 }
 
 async function submitResetPassword(id) {
+    if (!ensureUserManagementAccess()) return;
     const newPassword = document.getElementById('rpPassword').value;
     if (!newPassword || newPassword.length < 6) { showError('Password must be at least 6 characters'); return; }
     try {
@@ -180,6 +201,7 @@ async function submitResetPassword(id) {
 }
 
 async function handleDisableUser(id, fullName) {
+    if (!ensureUserManagementAccess()) return;
     if (!confirm(`Disable account for ${fullName}? They will no longer be able to log in.`)) return;
     try {
         await Api.deleteUser(id);

@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-requireRole(['super_admin', 'auditor']);
+requireRole(['super_admin', 'owner', 'auditor']);
 $pdo = getDB();
 
 $from = $_GET['from'] ?? null;

@@ -7,10 +7,12 @@
 define('SRSMS_BOOTSTRAPPED', true);
 
 if (session_status() === PHP_SESSION_NONE) {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
     session_set_cookie_params([
         'lifetime' => 8 * 3600, // 8 hours
         'path' => '/',
         'httponly' => true,
+        'secure' => $isHttps,
         'samesite' => 'Lax'
     ]);
     session_start();
@@ -19,6 +21,10 @@ if (session_status() === PHP_SESSION_NONE) {
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+header('Cache-Control: no-store, no-cache, must-revalidate, private');
+header('Pragma: no-cache');
 
 require_once __DIR__ . '/database.php';
 

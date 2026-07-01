@@ -36,6 +36,15 @@ function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+function normalizeRoleName(role) {
+    return String(role || '').toLowerCase().trim().replace(/\s+/g, '_');
+}
+
+function hasAnyRole(role, allowedRoles) {
+    const normalized = normalizeRoleName(role);
+    return allowedRoles.some(item => normalizeRoleName(item) === normalized);
+}
+
 // ---- Toast notifications ----
 
 function ensureToastContainer() {
@@ -94,12 +103,13 @@ function loadingHtml(text = 'Loading...') {
 // ---- Role label mapping ----
 
 const ROLE_LABELS = {
-    super_admin: 'Super Admin',
+    super_admin: 'Admin',
+    admin: 'Admin',
     owner: 'Owner',
     manager: 'Manager',
-    cashier: 'Cashier',
-    store_keeper: 'Store Keeper',
     accountant: 'Accountant',
+    store_keeper: 'Store Keeper',
+    cashier: 'Cashier',
     auditor: 'Auditor'
 };
 

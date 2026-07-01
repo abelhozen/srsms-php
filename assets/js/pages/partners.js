@@ -28,7 +28,7 @@ async function loadSuppliersTable() {
         }
         holder.innerHTML = `
             <table>
-                <thead><tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Email</th></tr></thead>
+                <thead><tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th></th></tr></thead>
                 <tbody>
                     ${suppliers.map(s => `
                         <tr>
@@ -36,6 +36,10 @@ async function loadSuppliersTable() {
                             <td>${escapeHtml(s.contact_person || '-')}</td>
                             <td>${escapeHtml(s.phone || '-')}</td>
                             <td>${escapeHtml(s.email || '-')}</td>
+                            <td style="white-space:nowrap;">
+                                <button class="btn btn-outline btn-sm" onclick="openEditSupplierModal(${s.id}, '${escapeHtml(s.name).replace(/'/g,"\\'")}', '${escapeHtml(s.contact_person || '').replace(/'/g,"\\'")}', '${escapeHtml(s.phone || '').replace(/'/g,"\\'")}', '${escapeHtml(s.email || '').replace(/'/g,"\\'")}', '${escapeHtml(s.address || '').replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-danger btn-sm" onclick="handleDeleteSupplier(${s.id}, '${escapeHtml(s.name).replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
+                            </td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -86,6 +90,55 @@ async function submitCreateSupplier() {
     }
 }
 
+function openEditSupplierModal(id, name, contactPerson, phone, email, address) {
+    openModal(`
+        <div class="modal">
+            <div class="modal-header"><h3>Edit Supplier</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Supplier Name</label><input type="text" id="esName" value="${escapeHtml(name)}" /></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Contact Person</label><input type="text" id="esContact" value="${escapeHtml(contactPerson)}" /></div>
+                    <div class="form-group"><label>Phone</label><input type="text" id="esPhone" value="${escapeHtml(phone)}" /></div>
+                </div>
+                <div class="form-group"><label>Email</label><input type="email" id="esEmail" value="${escapeHtml(email)}" /></div>
+                <div class="form-group"><label>Address</label><textarea id="esAddress" rows="2">${escapeHtml(address)}</textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-dark" onclick="submitEditSupplier(${id})">Save Changes</button>
+            </div>
+        </div>
+    `);
+}
+
+async function submitEditSupplier(id) {
+    try {
+        await Api.createSupplier({
+            name: document.getElementById('esName').value.trim(),
+            contactPerson: document.getElementById('esContact').value.trim(),
+            phone: document.getElementById('esPhone').value.trim(),
+            email: document.getElementById('esEmail').value.trim(),
+            address: document.getElementById('esAddress').value.trim()
+        });
+        showToast('Supplier updated successfully');
+        closeModal();
+        loadSuppliersTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+async function handleDeleteSupplier(id, name) {
+    if (!confirm(`Delete supplier ${name}?`)) return;
+    try {
+        await fetch(`${API_BASE}/partners/suppliers.php?id=${id}`, { method: 'DELETE', credentials: 'include' });
+        showToast('Supplier deleted');
+        loadSuppliersTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
 // ---- Customers ----
 
 async function renderCustomersPage(container) {
@@ -119,7 +172,7 @@ async function loadCustomersTable() {
         }
         holder.innerHTML = `
             <table>
-                <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>
+                <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th></th></tr></thead>
                 <tbody>
                     ${customers.map(c => `
                         <tr>
@@ -127,6 +180,10 @@ async function loadCustomersTable() {
                             <td>${escapeHtml(c.phone || '-')}</td>
                             <td>${escapeHtml(c.email || '-')}</td>
                             <td>${escapeHtml(c.address || '-')}</td>
+                            <td style="white-space:nowrap;">
+                                <button class="btn btn-outline btn-sm" onclick="openEditCustomerModal(${c.id}, '${escapeHtml(c.name).replace(/'/g,"\\'")}', '${escapeHtml(c.phone || '').replace(/'/g,"\\'")}', '${escapeHtml(c.email || '').replace(/'/g,"\\'")}', '${escapeHtml(c.address || '').replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-danger btn-sm" onclick="handleDeleteCustomer(${c.id}, '${escapeHtml(c.name).replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
+                            </td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -169,6 +226,53 @@ async function submitCreateCustomer() {
         });
         showToast('Customer added successfully');
         closeModal();
+        loadCustomersTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+function openEditCustomerModal(id, name, phone, email, address) {
+    openModal(`
+        <div class="modal">
+            <div class="modal-header"><h3>Edit Customer</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Customer Name</label><input type="text" id="ecName" value="${escapeHtml(name)}" /></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Phone</label><input type="text" id="ecPhone" value="${escapeHtml(phone)}" /></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="ecEmail" value="${escapeHtml(email)}" /></div>
+                </div>
+                <div class="form-group"><label>Address</label><textarea id="ecAddress" rows="2">${escapeHtml(address)}</textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-dark" onclick="submitEditCustomer(${id})">Save Changes</button>
+            </div>
+        </div>
+    `);
+}
+
+async function submitEditCustomer(id) {
+    try {
+        await Api.createCustomer({
+            name: document.getElementById('ecName').value.trim(),
+            phone: document.getElementById('ecPhone').value.trim(),
+            email: document.getElementById('ecEmail').value.trim(),
+            address: document.getElementById('ecAddress').value.trim()
+        });
+        showToast('Customer updated successfully');
+        closeModal();
+        loadCustomersTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+async function handleDeleteCustomer(id, name) {
+    if (!confirm(`Delete customer ${name}?`)) return;
+    try {
+        await fetch(`${API_BASE}/partners/customers.php?id=${id}`, { method: 'DELETE', credentials: 'include' });
+        showToast('Customer deleted');
         loadCustomersTable();
     } catch (err) {
         showError(err);

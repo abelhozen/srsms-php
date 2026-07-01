@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['super_admin', 'manager']);
+$user = requireRole(['super_admin', 'owner']);
 $pdo = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') jsonError('Method not allowed', 405);

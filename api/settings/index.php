@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-    $user = requireRole(['super_admin']);
+    $user = requireRole(['super_admin', 'owner']);
     $pdo = getDB();
     $body = getJsonBody();
 

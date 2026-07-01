@@ -3,6 +3,11 @@
    ============================================================ */
 
 async function renderAuditPage(container) {
+    if (!['super_admin', 'admin', 'owner', 'auditor'].includes(Store.user.role)) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>You do not have access to audit logs.</p></div>`;
+        return;
+    }
+
     container.innerHTML = `
         <div class="card">
             <div class="card-header"><h3>System Audit Trail</h3></div>
@@ -45,6 +50,12 @@ async function renderAuditPage(container) {
    ============================================================ */
 
 async function renderSettingsPage(container) {
+    if (!['super_admin', 'admin', 'owner'].includes(Store.user.role)) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🔒</div><p>You do not have access to system settings.</p></div>`;
+        return;
+    }
+
+    const canManageSettings = ['super_admin', 'owner'].includes(Store.user.role);
     container.innerHTML = `<div class="card"><div class="card-body"><div class="loading-spinner" style="margin:30px auto;"></div></div></div>`;
     try {
         const res = await Api.getSettings();
@@ -66,7 +77,7 @@ async function renderSettingsPage(container) {
                         <div class="form-group"><label>Low Stock Threshold</label><input type="number" id="setLowStock" value="${s.low_stock_threshold || 10}" min="0" /></div>
                         <div class="form-group"><label>Expiry Alert (days before)</label><input type="number" id="setExpiryDays" value="${s.expiry_alert_days || 30}" min="1" /></div>
                     </div>
-                    <button class="btn btn-dark" onclick="submitUpdateSettings()" style="margin-top:8px;">Save Settings</button>
+                    ${canManageSettings ? `<button class="btn btn-dark" onclick="submitUpdateSettings()" style="margin-top:8px;">Save Settings</button>` : `<p style="margin-top:10px;color:var(--text-muted);">You can view these settings, but only Admin/Owner can update them.</p>`}
                 </div>
             </div>
         `;

@@ -5,7 +5,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['super_admin', 'owner', 'manager', 'store_keeper', 'cashier', 'accountant', 'auditor']);
+$user = requireRole(['super_admin', 'admin', 'owner', 'manager', 'store_keeper', 'cashier', 'accountant', 'auditor']);
 $pdo = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $status = $_GET['status'] ?? null;
 
     $sql = "
-        SELECT p.id, p.product_code, p.name, p.unit, p.reorder_level, p.status,
+        SELECT p.id, p.product_code, p.name, p.unit, p.reorder_level, p.status, p.created_by,
                c.name AS category_name,
                COALESCE(SUM(b.quantity_remaining), 0) AS total_stock,
                MIN(b.expiry_date) AS nearest_expiry
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireRole(['super_admin', 'manager', 'store_keeper']);
+    requireRole(['super_admin', 'admin', 'owner']);
     $body = getJsonBody();
     requireFields($body, ['productCode', 'name']);
 

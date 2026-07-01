@@ -35,7 +35,12 @@ function renderLogin() {
                     </div>
                     <div class="field-group">
                         <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" autocomplete="current-password" required />
+                        <div style="position:relative;">
+                            <input type="password" id="loginPassword" autocomplete="current-password" required style="padding-right:48px;" />
+                            <button type="button" id="togglePasswordBtn" class="password-toggle-btn" aria-label="Show password">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" class="btn-primary" id="loginSubmitBtn">Sign In</button>
                 </form>
@@ -53,6 +58,17 @@ function renderLogin() {
             </div>
         </div>
     `;
+
+    const pwdInput = document.getElementById('loginPassword');
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    if (pwdInput && toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = pwdInput.type === 'password';
+            pwdInput.type = isHidden ? 'text' : 'password';
+            toggleBtn.innerHTML = isHidden ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+            toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
+    }
 
     document.getElementById('loginForm').addEventListener('submit', handleLoginSubmit);
 }

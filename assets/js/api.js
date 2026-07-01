@@ -70,6 +70,8 @@ const Api = {
 
     // Users
     listUsers: () => apiRequest('GET', '/users/index.php'),
+    getProfile: () => apiRequest('GET', '/users/profile.php'),
+    updateProfile: (payload) => apiRequest('PUT', '/users/profile.php', payload),
     listRoles: () => apiRequest('GET', '/users/roles.php'),
     createUser: (payload) => apiRequest('POST', '/users/index.php', payload),
     updateUser: (id, payload) => apiRequest('PUT', `/users/update.php?id=${id}`, payload),
@@ -82,6 +84,7 @@ const Api = {
     getProduct: (id) => apiRequest('GET', `/products/get.php?id=${id}`),
     createProduct: (payload) => apiRequest('POST', '/products/index.php', payload),
     updateProduct: (id, payload) => apiRequest('PUT', `/products/get.php?id=${id}`, payload),
+    deleteProduct: (id) => apiRequest('DELETE', `/products/get.php?id=${id}`),
     addBatch: (productId, payload) => apiRequest('POST', `/products/add-batch.php?productId=${productId}`, payload),
     updateBatchStatus: (batchId, status, note) => apiRequest('PUT', `/products/batch-status.php?batchId=${batchId}`, { status, note }),
     updateProductSellers: (productId, payload) => apiRequest('PUT', `/products/sellers.php?productId=${productId}`, payload),

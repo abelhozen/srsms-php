@@ -54,7 +54,17 @@ function setDayMonthYearPicker(idPrefix, isoDate) {
     if (yearEl) yearEl.value = year;
 }
 
+function ensureProductManagementAccess(productOwnerId = null) {
+    const canManage = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']) || Number(productOwnerId) === Number(Store.user.id);
+    if (!canManage) {
+        showError('Only Admin, Owner, or the product creator can edit or delete this product.');
+        return false;
+    }
+    return true;
+}
+
 async function renderProductsPage(container) {
+    const canManageProducts = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']);
     container.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
             <div class="search-input">
@@ -63,7 +73,7 @@ async function renderProductsPage(container) {
             </div>
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-outline" onclick="openManageCategoriesModal()">🏷 Manage Categories</button>
-                <button class="btn btn-dark" onclick="openCreateProductModal()">+ Add Product</button>
+                ${canManageProducts ? '<button class="btn btn-dark" onclick="openCreateProductModal()">+ Add Product</button>' : ''}
             </div>
         </div>
         <div class="card">
@@ -85,6 +95,7 @@ function debounce(fn, wait) {
 async function loadProductsTable() {
     const holder = document.getElementById('productsTableHolder');
     const search = document.getElementById('productSearchInput')?.value || '';
+    const canManageProducts = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']);
     try {
         const res = await Api.listProducts(search ? `?search=${encodeURIComponent(search)}` : '');
         const products = res.products;
@@ -110,10 +121,16 @@ async function loadProductsTable() {
                             </td>
                             <td>${p.nearest_expiry ? formatDate(p.nearest_expiry) : '-'}</td>
                             <td>${statusBadge(p.status)}</td>
-                            <td>
-                                ${noStock
-                                    ? `<button class="btn btn-green btn-sm" onclick="openProductDetail(${p.id})">+ Add Stock Now</button>`
-                                    : `<button class="btn btn-outline btn-sm" onclick="openProductDetail(${p.id})">View / Add Batch</button>`}
+                            <td style="white-space:nowrap;">
+                                <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+                                    ${canManageProducts || Number(p.created_by) === Number(Store.user.id) ? `
+                                        <button class="btn btn-outline btn-sm" onclick="openEditProductModal(${p.id}, '${escapeHtml(p.product_code).replace(/'/g, "\\'")}', '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.category_id || 'null'}, '${escapeHtml(p.unit || 'pcs').replace(/'/g, "\\'")}', ${p.reorder_level || 10}, '${p.status || 'active'}', ${p.created_by || 'null'})">Edit</button>
+                                        <button class="btn btn-danger btn-sm" onclick="handleDeleteProduct(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.created_by || 'null'})">Delete</button>
+                                    ` : ''}
+                                    ${noStock
+                                        ? `<button class="btn btn-green btn-sm" onclick="openProductDetail(${p.id})">+ Add Stock Now</button>`
+                                        : `<button class="btn btn-outline btn-sm" onclick="openProductDetail(${p.id})">View / Add Batch</button>`}
+                                </div>
                             </td>
                         </tr>
                     `;}).join('')}
@@ -131,6 +148,7 @@ async function loadProductsTable() {
 }
 
 async function openCreateProductModal() {
+    if (!ensureProductManagementAccess()) return;
     let categories = [];
     try { categories = (await Api.listCategories()).categories; } catch { /* ignore */ }
 
@@ -163,6 +181,7 @@ async function openCreateProductModal() {
 }
 
 async function submitCreateProduct() {
+    if (!ensureProductManagementAccess()) return;
     const productCode = document.getElementById('npCode').value.trim();
     const name = document.getElementById('npName').value.trim();
     const categoryId = document.getElementById('npCategory').value || null;
@@ -181,6 +200,79 @@ async function submitCreateProduct() {
     }
 }
 
+async function openEditProductModal(productId, productCode, name, categoryId, unit, reorderLevel, status, productOwnerId = null) {
+    if (!ensureProductManagementAccess(productOwnerId)) return;
+    let categories = [];
+    try { categories = (await Api.listCategories()).categories; } catch { /* ignore */ }
+
+    openModal(`
+        <div class="modal">
+            <div class="modal-header"><h3>Edit Product</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label>Product Code</label><input type="text" id="epCode" value="${escapeHtml(productCode)}" /></div>
+                    <div class="form-group"><label>Product Name</label><input type="text" id="epName" value="${escapeHtml(name)}" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="epCategory">
+                            <option value="">-- None --</option>
+                            ${categories.map(c => `<option value="${c.id}" ${Number(c.id) === Number(categoryId) ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Unit</label><input type="text" id="epUnit" value="${escapeHtml(unit)}" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Reorder Level</label><input type="number" id="epReorder" value="${reorderLevel || 10}" min="0" /></div>
+                    <div class="form-group"><label>Status</label>
+                        <select id="epStatus">
+                            <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
+                            <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-dark" onclick="submitEditProduct(${productId})">Save Changes</button>
+            </div>
+        </div>
+    `);
+}
+
+async function submitEditProduct(productId) {
+    if (!ensureProductManagementAccess()) return;
+    try {
+        await Api.updateProduct(productId, {
+            productCode: document.getElementById('epCode').value.trim(),
+            name: document.getElementById('epName').value.trim(),
+            categoryId: document.getElementById('epCategory').value || null,
+            unit: document.getElementById('epUnit').value.trim() || 'pcs',
+            reorderLevel: parseInt(document.getElementById('epReorder').value) || 10,
+            status: document.getElementById('epStatus').value
+        });
+        showToast('Product updated successfully');
+        closeModal();
+        loadProductsTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+async function handleDeleteProduct(productId, productName, productOwnerId = null) {
+    if (!ensureProductManagementAccess(productOwnerId)) return;
+    if (!confirm(`Deactivate "${productName}"? It will no longer appear in active listings and POS.`)) return;
+    try {
+        await Api.deleteProduct(productId);
+        showToast('Product deactivated successfully');
+        closeModal();
+        loadProductsTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
 async function openProductDetail(productId) {
     openModal(`<div class="modal"><div class="modal-body"><div class="loading-spinner" style="margin:30px auto;"></div></div></div>`);
     try {
@@ -189,12 +281,19 @@ async function openProductDetail(productId) {
         const batches = res.batches;
         const authorizedSellers = res.authorizedSellers || [];
         const isRestricted = Number(p.restrict_sellers) === 1;
+        const canManageProducts = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']) || Number(p.created_by) === Number(Store.user.id);
 
         openModal(`
             <div class="modal" style="max-width:720px;">
                 <div class="modal-header">
                     <h3>${escapeHtml(p.name)}</h3>
-                    <button class="modal-close" onclick="closeModal()">✕</button>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        ${canManageProducts ? `
+                            <button class="btn btn-outline btn-sm" onclick="openEditProductModal(${productId}, '${escapeHtml(p.product_code).replace(/'/g, "\\'")}', '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.category_id || 'null'}, '${escapeHtml(p.unit || 'pcs').replace(/'/g, "\\'")}', ${p.reorder_level || 10}, '${p.status || 'active'}', ${p.created_by || 'null'})">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="handleDeleteProduct(${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.created_by || 'null'})">Delete</button>
+                        ` : ''}
+                        <button class="modal-close" onclick="closeModal()">✕</button>
+                    </div>
                 </div>
                 <div class="modal-body">
                     <div style="display:flex; gap:20px; margin-bottom:18px; font-size:13px; color:var(--text-secondary);">

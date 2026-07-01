@@ -3,7 +3,7 @@
    ============================================================ */
 
 async function renderDashboardPage(container) {
-    const isFinancial = ['super_admin', 'owner', 'manager', 'accountant', 'auditor'].includes(Store.user.role);
+    const isFinancial = ['super_admin', 'admin', 'owner'].includes(Store.user.role);
 
     const calls = [
         Api.dashboardSummary(),
@@ -25,28 +25,40 @@ async function renderDashboardPage(container) {
         : '';
 
     container.innerHTML = `
+        <section class="dashboard-hero">
+            <div>
+                <div class="hero-eyebrow"><i class="fa-solid fa-award"></i> ${escapeHtml(roleLabel(Store.user.role))} Command Center</div>
+                <h2>Gold Retail performance at a glance</h2>
+                <p>Monitor sales, stock, expenses, and alerts in one secure workspace built for a growing shop.</p>
+            </div>
+            <div class="hero-actions">
+                <button class="btn btn-dark" onclick="navigateTo('pos')"><i class="fa-solid fa-cash-register"></i> New Sale</button>
+                <button class="btn btn-outline" onclick="navigateTo('products')"><i class="fa-solid fa-boxes-stacked"></i> Manage Stock</button>
+            </div>
+        </section>
+
         <div class="kpi-grid">
             <div class="kpi-card">
-                <div class="kpi-label">Today's Sales</div>
+                <div class="kpi-label"><i class="fa-solid fa-receipt"></i> Today's Sales</div>
                 <div class="kpi-value">${formatMoney(today.revenue)}</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">${today.transactionCount} transaction(s)</div>
+                <div class="metric-chip">${today.transactionCount} transaction(s) recorded</div>
             </div>
             ${isFinancial ? `
             <div class="kpi-card">
-                <div class="kpi-label">Today's Net Profit</div>
+                <div class="kpi-label"><i class="fa-solid fa-chart-line"></i> Today's Net Profit</div>
                 <div class="kpi-value" style="color:${today.netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${formatMoney(today.netProfit)}</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">After expenses &amp; stock loss</div>
+                <div class="metric-chip">After expenses &amp; stock loss</div>
             </div>` : ''}
             <div class="kpi-card">
-                <div class="kpi-label">This Month Revenue</div>
+                <div class="kpi-label"><i class="fa-solid fa-money-bill-trend-up"></i> This Month Revenue</div>
                 <div class="kpi-value">${formatMoney(month.revenue)}</div>
                 ${growthBadge}
             </div>
             ${isFinancial ? `
             <div class="kpi-card">
-                <div class="kpi-label">This Month Net Profit</div>
+                <div class="kpi-label"><i class="fa-solid fa-scale-balanced"></i> This Month Net Profit</div>
                 <div class="kpi-value" style="color:${month.netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${formatMoney(month.netProfit)}</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">${month.netProfit >= 0 ? 'Business is profitable this month' : 'Business is running at a loss'}</div>
+                <div class="metric-chip">${month.netProfit >= 0 ? 'Profitable performance this month' : 'Loss alert needs attention'}</div>
             </div>` : ''}
         </div>
 
@@ -54,15 +66,15 @@ async function renderDashboardPage(container) {
 
         ${health ? renderBusinessHealthPanel(health) : ''}
 
-        <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:18px; margin-top:18px;" id="dashboardGrid">
+        <div class="dashboard-grid" id="dashboardGrid">
             <div class="card">
-                <div class="card-header"><h3>Sales Trend (30 Days)</h3></div>
+                <div class="card-header"><h3><i class="fa-solid fa-chart-column"></i> Sales Trend (30 Days)</h3></div>
                 <div class="card-body" id="trendChartHolder">
                     <div class="loading-spinner"></div>
                 </div>
             </div>
             <div class="card">
-                <div class="card-header"><h3>Alerts</h3></div>
+                <div class="card-header"><h3><i class="fa-solid fa-bell"></i> Live Alerts</h3></div>
                 <div class="card-body" style="display:flex; flex-direction:column; gap:14px;">
                     <div>
                         <div style="font-size:12px;font-weight:700;color:var(--accent-amber);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">⚠ Low Stock (${lowStockRes.lowStock.length})</div>
@@ -89,7 +101,7 @@ async function renderDashboardPage(container) {
         </div>
 
         <div class="card" style="margin-top:18px;">
-            <div class="card-header"><h3>Top Selling Products</h3></div>
+            <div class="card-header"><h3><i class="fa-solid fa-boxes-stacked"></i> Top Selling Products</h3></div>
             <div class="card-body" id="topProductsHolder"><div class="loading-spinner"></div></div>
         </div>
     `;
