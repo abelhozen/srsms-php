@@ -26,7 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $params = [];
     if ($search) { $sql .= " AND (p.name LIKE ? OR p.product_code LIKE ?)"; $params[] = "%$search%"; $params[] = "%$search%"; }
     if ($categoryId) { $sql .= " AND p.category_id = ?"; $params[] = $categoryId; }
-    if ($status) { $sql .= " AND p.status = ?"; $params[] = $status; }
+    if ($status && $status !== 'all') {
+        $sql .= " AND p.status = ?";
+        $params[] = $status;
+    } elseif (!$status) {
+        $sql .= " AND p.status = 'active'";
+    }
     $sql .= " GROUP BY p.id ORDER BY p.name ASC LIMIT 500";
 
     $stmt = $pdo->prepare($sql);

@@ -5,42 +5,42 @@
 async function renderReportsPage(container) {
     container.innerHTML = `
         <div class="card" style="margin-bottom:18px;">
-            <div class="card-header"><h3>Report Period</h3></div>
+            <div class="card-header"><h3>Kipindi cha Ripoti</h3></div>
             <div class="card-body" style="display:flex; gap:14px; align-items:flex-end;">
-                <div class="form-group" style="margin:0;"><label>From</label><input type="date" id="reportFrom" value="${daysAgoISO(30)}" /></div>
-                <div class="form-group" style="margin:0;"><label>To</label><input type="date" id="reportTo" value="${todayISO()}" /></div>
+                <div class="form-group" style="margin:0;"><label>Tangu</label><input type="date" id="reportFrom" value="${daysAgoISO(30)}" /></div>
+                <div class="form-group" style="margin:0;"><label>Hadi</label><input type="date" id="reportTo" value="${todayISO()}" /></div>
             </div>
         </div>
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
             <div class="card">
-                <div class="card-header"><h3>Sales Report</h3></div>
+                <div class="card-header"><h3>Ripoti ya Mauzo</h3></div>
                 <div class="card-body">
-                    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Every transaction in the selected period — cashier, total, payment method, and status.</p>
+                    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Kila muamala katika kipindi kilichochaguliwa — mkasishaji, jumla, njia ya malipo, na hali.</p>
                     <div style="display:flex; gap:10px;">
-                        <button class="btn btn-outline" onclick="openReportPdf('sales')">🖨 PDF (Print)</button>
+                        <button class="btn btn-outline" onclick="openReportPdf('sales')">🖨 PDF (Chapisha)</button>
                         <button class="btn btn-outline" onclick="downloadReport('sales', 'excel')">⬇ Excel</button>
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header"><h3>Profit &amp; Loss</h3></div>
+                <div class="card-header"><h3>Faida na Gharama</h3></div>
                 <div class="card-body">
-                    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Revenue, cost of goods sold, gross and net profit, plus expense breakdown.</p>
+                    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Mapato, gharama ya bidhaa zilizouzwa, faida ya kawaida na halisi, pamoja na muhtasari wa matumizi.</p>
                     <div style="display:flex; gap:10px;">
-                        <button class="btn btn-outline" onclick="openReportPdf('pnl')">🖨 PDF (Print)</button>
+                        <button class="btn btn-outline" onclick="openReportPdf('pnl')">🖨 PDF (Chapisha)</button>
                         <button class="btn btn-outline" onclick="downloadReport('pnl', 'excel')">⬇ Excel</button>
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header"><h3>Inventory Report</h3></div>
+                <div class="card-header"><h3>Ripoti ya Hisa</h3></div>
                 <div class="card-body">
-                    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Current stock levels, stock value, and nearest expiry per product.</p>
+                    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Kiwango cha hisa ya sasa, thamani ya hisa, na tarehe ya kuisha muda karibu kwa kila bidhaa.</p>
                     <div style="display:flex; gap:10px;">
-                        <button class="btn btn-outline" onclick="openReportPdf('inventory')">🖨 PDF (Print)</button>
+                        <button class="btn btn-outline" onclick="openReportPdf('inventory')">🖨 PDF (Chapisha)</button>
                         <button class="btn btn-outline" onclick="downloadReport('inventory', 'excel')">⬇ Excel</button>
                     </div>
                 </div>
@@ -48,7 +48,7 @@ async function renderReportsPage(container) {
         </div>
 
         <p style="font-size:12px; color:var(--text-muted); margin-top:18px;">
-            💡 "PDF (Print)" opens a print-ready page in a new tab — use your browser's Print dialog and choose "Save as PDF" as the destination.
+            💡 "PDF (Chapisha)" hufungua ukurasa wa maandishi ya kuchapisha kwenye kichupo kipya — tumia kisanduku cha kuchapisha cha kivinjari chako na uchague "Hifadhi kama PDF" kama eneo lengwa.
         </p>
     `;
 }
@@ -67,7 +67,7 @@ async function downloadReport(type, format) {
     const to = document.getElementById('reportTo')?.value || todayISO();
 
     try {
-        showToast('Preparing your report...');
+        showToast('Inatayarisha ripoti yako...');
         if (type === 'sales') {
             await Api.downloadSalesExcel(from, to);
         } else if (type === 'pnl') {
@@ -75,7 +75,7 @@ async function downloadReport(type, format) {
         } else if (type === 'inventory') {
             await Api.downloadInventoryExcel();
         }
-        showToast('Report downloaded successfully');
+        showToast('Ripoti imepakuliwa kwa mafanikio');
     } catch (err) {
         showError(err);
     }

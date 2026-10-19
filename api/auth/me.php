@@ -22,4 +22,10 @@ $permStmt = $pdo->prepare(
 $permStmt->execute([$row['role_id']]);
 $permissions = array_column($permStmt->fetchAll(), 'code');
 
+// Optional: return CSRF token for frontend (only when requested)
+if (isset($_GET['csrf']) && $_GET['csrf'] === '1') {
+    jsonSuccess(['user' => $row, 'permissions' => $permissions, 'csrfToken' => csrfToken()]);
+}
+
 jsonSuccess(['user' => $row, 'permissions' => $permissions]);
+

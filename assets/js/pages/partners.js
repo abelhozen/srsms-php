@@ -6,7 +6,7 @@ async function renderSuppliersPage(container) {
     const canManage = ['super_admin', 'manager', 'store_keeper'].includes(Store.user.role);
     container.innerHTML = `
         <div style="display:flex; justify-content:flex-end; margin-bottom:18px;">
-            ${canManage ? `<button class="btn btn-dark" onclick="openCreateSupplierModal()">+ Add Supplier</button>` : ''}
+            ${canManage ? `<button class="btn btn-dark" onclick="openCreateSupplierModal()">+ Ongeza Mtoaji</button>` : ''}
         </div>
         <div class="card">
             <div class="card-body" style="padding:0;" id="suppliersTableHolder">
@@ -23,12 +23,12 @@ async function loadSuppliersTable() {
         const res = await Api.listSuppliers();
         const suppliers = res.suppliers;
         if (suppliers.length === 0) {
-            holder.innerHTML = `<div class="empty-state"><div class="icon">🚚</div><p>No suppliers added yet.</p></div>`;
+            holder.innerHTML = `<div class="empty-state"><div class="icon">🚚</div><p>Hakuna wazabuni walioongezwa bado.</p></div>`;
             return;
         }
         holder.innerHTML = `
             <table>
-                <thead><tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th></th></tr></thead>
+                <thead><tr><th>Jina</th><th>Mtu wa Mawasiliano</th><th>Simu</th><th>Barua pepe</th><th></th></tr></thead>
                 <tbody>
                     ${suppliers.map(s => `
                         <tr>
@@ -46,26 +46,26 @@ async function loadSuppliersTable() {
             </table>
         `;
     } catch (err) {
-        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load suppliers.</p></div>`;
+        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia wazabuni.</p></div>`;
     }
 }
 
 function openCreateSupplierModal() {
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Add Supplier</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Ongeza Mtoaji</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Supplier Name</label><input type="text" id="nsName" /></div>
+                <div class="form-group"><label>Jina la Mtoaji</label><input type="text" id="nsName" /></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Contact Person</label><input type="text" id="nsContact" /></div>
-                    <div class="form-group"><label>Phone</label><input type="text" id="nsPhone" /></div>
+                    <div class="form-group"><label>Mtu wa Mawasiliano</label><input type="text" id="nsContact" /></div>
+                    <div class="form-group"><label>Simu</label><input type="text" id="nsPhone" /></div>
                 </div>
-                <div class="form-group"><label>Email</label><input type="email" id="nsEmail" /></div>
-                <div class="form-group"><label>Address</label><textarea id="nsAddress" rows="2"></textarea></div>
+                <div class="form-group"><label>Barua pepe</label><input type="email" id="nsEmail" /></div>
+                <div class="form-group"><label>Anwani</label><textarea id="nsAddress" rows="2"></textarea></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitCreateSupplier()">Save Supplier</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitCreateSupplier()">Hifadhi Mtoaji</button>
             </div>
         </div>
     `);
@@ -93,19 +93,19 @@ async function submitCreateSupplier() {
 function openEditSupplierModal(id, name, contactPerson, phone, email, address) {
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Edit Supplier</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Hariri Mtoaji</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Supplier Name</label><input type="text" id="esName" value="${escapeHtml(name)}" /></div>
+                <div class="form-group"><label>Jina la Mtoaji</label><input type="text" id="esName" value="${escapeHtml(name)}" /></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Contact Person</label><input type="text" id="esContact" value="${escapeHtml(contactPerson)}" /></div>
-                    <div class="form-group"><label>Phone</label><input type="text" id="esPhone" value="${escapeHtml(phone)}" /></div>
+                    <div class="form-group"><label>Mtu wa Mawasiliano</label><input type="text" id="esContact" value="${escapeHtml(contactPerson)}" /></div>
+                    <div class="form-group"><label>Simu</label><input type="text" id="esPhone" value="${escapeHtml(phone)}" /></div>
                 </div>
-                <div class="form-group"><label>Email</label><input type="email" id="esEmail" value="${escapeHtml(email)}" /></div>
-                <div class="form-group"><label>Address</label><textarea id="esAddress" rows="2">${escapeHtml(address)}</textarea></div>
+                <div class="form-group"><label>Barua pepe</label><input type="email" id="esEmail" value="${escapeHtml(email)}" /></div>
+                <div class="form-group"><label>Anwani</label><textarea id="esAddress" rows="2">${escapeHtml(address)}</textarea></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitEditSupplier(${id})">Save Changes</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitEditSupplier(${id})">Hifadhi Mabadiliko</button>
             </div>
         </div>
     `);
@@ -146,9 +146,9 @@ async function renderCustomersPage(container) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
             <div class="search-input">
                 <span>🔍</span>
-                <input type="text" id="customerSearchInput" placeholder="Search customers..." />
+                <input type="text" id="customerSearchInput" placeholder="Tafuta wateja..." />
             </div>
-            <button class="btn btn-dark" onclick="openCreateCustomerModal()">+ Add Customer</button>
+            <button class="btn btn-dark" onclick="openCreateCustomerModal()">+ Ongeza Mteja</button>
         </div>
         <div class="card">
             <div class="card-body" style="padding:0;" id="customersTableHolder">
@@ -167,12 +167,12 @@ async function loadCustomersTable() {
         const res = await Api.listCustomers(search ? `?search=${encodeURIComponent(search)}` : '');
         const customers = res.customers;
         if (customers.length === 0) {
-            holder.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No customers found.</p></div>`;
+            holder.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>Hakuna wateja walio patikana.</p></div>`;
             return;
         }
         holder.innerHTML = `
             <table>
-                <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th></th></tr></thead>
+                <thead><tr><th>Jina</th><th>Simu</th><th>Barua pepe</th><th>Anwani</th><th></th></tr></thead>
                 <tbody>
                     ${customers.map(c => `
                         <tr>
@@ -190,25 +190,25 @@ async function loadCustomersTable() {
             </table>
         `;
     } catch (err) {
-        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load customers.</p></div>`;
+        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia wateja.</p></div>`;
     }
 }
 
 function openCreateCustomerModal() {
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Add Customer</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Ongeza Mteja</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Customer Name</label><input type="text" id="ncName" /></div>
+                <div class="form-group"><label>Jina la Mteja</label><input type="text" id="ncName" /></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Phone</label><input type="text" id="ncPhone" /></div>
-                    <div class="form-group"><label>Email</label><input type="email" id="ncEmail" /></div>
+                    <div class="form-group"><label>Simu</label><input type="text" id="ncPhone" /></div>
+                    <div class="form-group"><label>Barua pepe</label><input type="email" id="ncEmail" /></div>
                 </div>
-                <div class="form-group"><label>Address</label><textarea id="ncAddress" rows="2"></textarea></div>
+                <div class="form-group"><label>Anwani</label><textarea id="ncAddress" rows="2"></textarea></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitCreateCustomer()">Save Customer</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitCreateCustomer()">Hifadhi Mteja</button>
             </div>
         </div>
     `);
@@ -235,18 +235,18 @@ async function submitCreateCustomer() {
 function openEditCustomerModal(id, name, phone, email, address) {
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Edit Customer</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Hariri Mteja</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Customer Name</label><input type="text" id="ecName" value="${escapeHtml(name)}" /></div>
+                <div class="form-group"><label>Jina la Mteja</label><input type="text" id="ecName" value="${escapeHtml(name)}" /></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Phone</label><input type="text" id="ecPhone" value="${escapeHtml(phone)}" /></div>
-                    <div class="form-group"><label>Email</label><input type="email" id="ecEmail" value="${escapeHtml(email)}" /></div>
+                    <div class="form-group"><label>Simu</label><input type="text" id="ecPhone" value="${escapeHtml(phone)}" /></div>
+                    <div class="form-group"><label>Barua pepe</label><input type="email" id="ecEmail" value="${escapeHtml(email)}" /></div>
                 </div>
-                <div class="form-group"><label>Address</label><textarea id="ecAddress" rows="2">${escapeHtml(address)}</textarea></div>
+                <div class="form-group"><label>Anwani</label><textarea id="ecAddress" rows="2">${escapeHtml(address)}</textarea></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitEditCustomer(${id})">Save Changes</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitEditCustomer(${id})">Hifadhi Mabadiliko</button>
             </div>
         </div>
     `);

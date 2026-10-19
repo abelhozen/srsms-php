@@ -13,8 +13,17 @@ requireFields($body, ['username', 'password']);
 $username = trim($body['username']);
 $password = $body['password'];
 
+// Basic per-session throttle to reduce brute force.
+// (Also account-level lockout already exists in this endpoint.)
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$key = 'login:' . $ip . ':' . strtolower($username);
+if (!rateLimitHit($key, 8, 300)) {
+    jsonError('Too many login attempts. Try again later.', 429);
+}
+
 $pdo = getDB();
 $stmt = $pdo->prepare(
+
     "SELECT u.*, r.name AS role_name, r.label AS role_label
      FROM users u JOIN roles r ON r.id = u.role_id
      WHERE u.username = ? OR u.email = ?"

@@ -3,6 +3,29 @@
    ============================================================ */
 
 const API_BASE = 'api';
+const API_CACHE_TTL_MS = 15000;
+const API_CACHE = new Map();
+
+function getApiCacheKey(method, endpoint) {
+    return `${method.toUpperCase()} ${endpoint}`;
+}
+
+function readApiCache(method, endpoint) {
+    const key = getApiCacheKey(method, endpoint);
+    const cached = API_CACHE.get(key);
+    if (!cached) return null;
+    if (Date.now() - cached.time < API_CACHE_TTL_MS) return cached.data;
+    API_CACHE.delete(key);
+    return null;
+}
+
+function writeApiCache(method, endpoint, data) {
+    API_CACHE.set(getApiCacheKey(method, endpoint), { time: Date.now(), data });
+}
+
+function clearApiCache() {
+    API_CACHE.clear();
+}
 
 const Store = {
     get user() { try { return JSON.parse(sessionStorage.getItem('srsms_user')); } catch { return null; } },
@@ -18,9 +41,30 @@ const Store = {
 async function apiRequest(method, endpoint, body) {
     const headers = { 'Content-Type': 'application/json' };
     const opts = { method, headers, credentials: 'include' }; // include = send PHP session cookie
+
+    if (method === 'GET') {
+        const cached = readApiCache(method, endpoint);
+        if (cached) return cached;
+    }
+
+    // Request timeout: prevents long hangs and keeps perceived speed high.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5500);
+    opts.signal = controller.signal;
+
+    // CSRF token: expected to exist in sessionStorage (we fetch once after boot)
+    const csrf = sessionStorage.getItem('srsms_csrf');
+    if (csrf) headers['X-CSRF-Token'] = csrf;
+
     if (body !== undefined) opts.body = JSON.stringify(body);
 
-    const res = await fetch(`${API_BASE}${endpoint}`, opts);
+    let res;
+    try {
+        res = await fetch(`${API_BASE}${endpoint}`, opts);
+    } finally {
+        clearTimeout(timeoutId);
+    }
+
 
     if (res.status === 401) {
         Store.clear();
@@ -36,6 +80,13 @@ async function apiRequest(method, endpoint, body) {
         err.data = data;
         throw err;
     }
+
+    if (method === 'GET') {
+        writeApiCache(method, endpoint, data);
+    } else {
+        clearApiCache();
+    }
+
     return data;
 }
 
@@ -70,6 +121,7 @@ const Api = {
 
     // Users
     listUsers: () => apiRequest('GET', '/users/index.php'),
+    updateRolePermissions: (roleId, permissionIds) => apiRequest('PUT', '/users/roles.php', { roleId, permissionIds }),
     getProfile: () => apiRequest('GET', '/users/profile.php'),
     updateProfile: (payload) => apiRequest('PUT', '/users/profile.php', payload),
     listRoles: () => apiRequest('GET', '/users/roles.php'),
@@ -96,6 +148,7 @@ const Api = {
     listSales: (params = '') => apiRequest('GET', `/sales/list.php${params}`),
     getSale: (id) => apiRequest('GET', `/sales/get.php?id=${id}`),
     voidSale: (id) => apiRequest('PUT', `/sales/void.php?id=${id}`),
+    clearSalesHistory: (payload) => apiRequest('DELETE', '/sales/clear-history.php', payload),
     dailyRegister: (date) => apiRequest('GET', `/sales/daily-register.php${date ? `?date=${date}` : ''}`),
 
     // Expenses
@@ -123,9 +176,16 @@ const Api = {
     // Settings & Audit
     getSettings: () => apiRequest('GET', '/settings/index.php'),
     updateSettings: (payload) => apiRequest('PUT', '/settings/index.php', payload),
+    systemHealth: () => apiRequest('GET', '/settings/system-health.php'),
     listAuditLogs: (params = '') => apiRequest('GET', `/settings/audit-logs.php${params}`),
 
+    // Backups
+    listBackups: (limit = 20) => apiRequest('GET', `/settings/backup.php?limit=${limit}`),
+    createBackup: () => apiRequest('POST', '/settings/backup.php', { action: 'create' }),
+    downloadBackup: (filename) => apiDownload(`/settings/backup_download.php?file=${encodeURIComponent(filename)}`, filename),
+
     // Reports - PDF opens a print-ready tab; Excel downloads a .xls file
+
     openSalesPdf: (from, to) => openPdfReport(`/reports/sales-pdf.php?from=${from}&to=${to}`),
     downloadSalesExcel: (from, to) => apiDownload(`/reports/sales-excel.php?from=${from}&to=${to}`, `sales-report-${from}_${to}.xls`),
     openPnlPdf: (from, to) => openPdfReport(`/reports/profit-loss-pdf.php?from=${from}&to=${to}`),

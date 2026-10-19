@@ -8,33 +8,35 @@ async function renderProfilePage(container) {
     try {
         const res = await Api.getProfile();
         const profile = res.profile || {};
-        container.innerHTML = `
-            <div class="card" style="max-width:760px;">
-                <div class="card-header"><h3>My Profile</h3></div>
-                <div class="card-body">
+container.innerHTML = `
+        <div class="card" style="width:100%; max-width:none;">
+
+                <div class="card-header"><h3>Wasifu Wangu</h3></div>
+                <div class="card-body" style="padding:28px;">
+
                     <div class="form-row">
-                        <div class="form-group"><label>Full Name</label><input type="text" id="profileFullName" value="${escapeHtml(profile.full_name || '')}" /></div>
-                        <div class="form-group"><label>Username</label><input type="text" id="profileUsername" value="${escapeHtml(profile.username || '')}" disabled /></div>
+                        <div class="form-group"><label>Jina Kamili</label><input type="text" id="profileFullName" value="${escapeHtml(profile.full_name || '')}" /></div>
+                        <div class="form-group"><label>Jina la Mtumiaji</label><input type="text" id="profileUsername" value="${escapeHtml(profile.username || '')}" disabled /></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group"><label>Email</label><input type="email" id="profileEmail" value="${escapeHtml(profile.email || '')}" /></div>
-                        <div class="form-group"><label>Phone</label><input type="text" id="profilePhone" value="${escapeHtml(profile.phone || '')}" /></div>
+                        <div class="form-group"><label>Barua pepe</label><input type="email" id="profileEmail" value="${escapeHtml(profile.email || '')}" /></div>
+                        <div class="form-group"><label>Simu</label><input type="text" id="profilePhone" value="${escapeHtml(profile.phone || '')}" /></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group"><label>Role</label><input type="text" value="${escapeHtml(profile.role_label || profile.role_name || '')}" disabled /></div>
-                        <div class="form-group"><label>Status</label><input type="text" value="${escapeHtml(profile.status || '')}" disabled /></div>
+                        <div class="form-group"><label>Jukumu</label><input type="text" value="${escapeHtml(profile.role_label || profile.role_name || '')}" disabled /></div>
+                        <div class="form-group"><label>Hali</label><input type="text" value="${escapeHtml(profile.status || '')}" disabled /></div>
                     </div>
-                    <div class="form-group"><label>Current Password</label><input type="password" id="profileCurrentPassword" placeholder="Required only if changing password" /></div>
+                    <div class="form-group"><label>Nenosiri la Sasa</label><input type="password" id="profileCurrentPassword" placeholder="Inahitajika tu ukibadilisha nenosiri" /></div>
                     <div class="form-row">
-                        <div class="form-group"><label>New Password</label><input type="password" id="profileNewPassword" placeholder="Minimum 6 characters" /></div>
-                        <div class="form-group"><label>Confirm New Password</label><input type="password" id="profileConfirmPassword" placeholder="Re-enter new password" /></div>
+                        <div class="form-group"><label>Nenosiri Jipya</label><input type="password" id="profileNewPassword" placeholder="Angalau herufi 6" /></div>
+                        <div class="form-group"><label>Thibitisha Nenosiri Jipya</label><input type="password" id="profileConfirmPassword" placeholder="Andika tena nenosiri jipya" /></div>
                     </div>
-                    <button class="btn btn-dark" onclick="submitProfileUpdate()">Save Profile</button>
+                    <button class="btn btn-dark" onclick="submitProfileUpdate()">Hifadhi Wasifu</button>
                 </div>
             </div>
         `;
     } catch (err) {
-        container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load profile.</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia wasifu.</p></div>`;
     }
 }
 
@@ -47,7 +49,7 @@ async function submitProfileUpdate() {
     const confirmPassword = document.getElementById('profileConfirmPassword')?.value;
 
     if (newPassword && newPassword !== confirmPassword) {
-        showError('New password and confirmation do not match');
+        showError('Nenosiri jipya na uthibitisho lake hazilingani');
         return;
     }
 
@@ -59,7 +61,7 @@ async function submitProfileUpdate() {
             currentPassword: currentPassword || null,
             newPassword: newPassword || null
         });
-        showToast('Profile updated successfully');
+        showToast('Wasifu umehifadhiwa kwa mafanikio');
         renderProfilePage(document.getElementById('pageBody'));
     } catch (err) {
         showError(err);

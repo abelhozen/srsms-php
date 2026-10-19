@@ -7,7 +7,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['super_admin', 'owner', 'manager', 'accountant']);
+$user = requireRole(['super_admin', 'admin', 'owner', 'manager', 'accountant']);
 $pdo = getDB();
 
 // Current stock value (what's sitting on shelves, at cost price)
@@ -63,7 +63,7 @@ $pendingExpenses = $pendingExpenseStmt->fetch();
 $lifetimeLossStmt = $pdo->query(
     "SELECT COALESCE(SUM(ABS(il.quantity_change) * b.buying_price), 0) AS total_loss
      FROM inventory_logs il JOIN product_batches b ON b.id = il.batch_id
-     WHERE il.change_type IN ('damage','expiry','damaged','expired')"
+     WHERE il.change_type IN ('damage','expiry')"
 );
 $lifetimeLoss = (float)$lifetimeLossStmt->fetch()['total_loss'];
 

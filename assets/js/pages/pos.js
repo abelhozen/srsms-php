@@ -10,25 +10,39 @@ async function renderPosPage(container) {
         <div class="pos-layout">
             <div class="pos-products">
                 <div class="pos-search-bar">
-                    <input type="text" id="posSearchInput" placeholder="Search product by name or code..." autofocus />
+                    <input type="text" id="posSearchInput" placeholder="Tafuta bidhaa kwa jina au msimbo..." autofocus />
                 </div>
                 <div class="pos-product-grid" id="posProductGrid">
-                    <div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div><p>Start typing to search products...</p></div>
+                    <div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div><p>Anza kuandika ili kutafuta bidhaa...</p></div>
                 </div>
             </div>
             <div class="pos-cart">
-                <div class="pos-cart-header">Current Sale</div>
+                <div class="pos-cart-header">Mauzo ya Sasa</div>
+                <div class="pos-customer-selector">
+                    <label for="posCustomer">Mteja</label>
+                    <div class="pos-customer-controls">
+                        <select id="posCustomer">
+                            <option value="">Mteja wa kawaida (Generic)</option>
+                        </select>
+                        <button class="btn btn-outline btn-sm" type="button" onclick="openPosCustomerModal()" title="Ongeza mteja mpya" aria-label="Ongeza mteja mpya">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                        </button>
+                        <button class="btn btn-outline btn-sm" type="button" onclick="clearPosCustomer()" title="Ondoa mteja kwenye mauzo haya" aria-label="Ondoa mteja aliyechaguliwa">
+                            <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
                 <div class="pos-cart-items" id="posCartItems">
-                    <div class="empty-state"><div class="icon">🛒</div><p>Cart is empty</p></div>
+                    <div class="empty-state"><div class="icon">🛒</div><p>Kikapu kimepangwa wazi</p></div>
                 </div>
                 <div class="pos-cart-summary">
-                    <div class="summary-row"><span>Subtotal</span><span id="posSubtotal">${formatMoney(0)}</span></div>
+                    <div class="summary-row"><span>Jumla Ndogo</span><span id="posSubtotal">${formatMoney(0)}</span></div>
                     <div class="summary-row">
-                        <span>Discount</span>
+                        <span>Punguzo</span>
                         <input type="number" id="posDiscount" value="0" min="0" style="width:90px; text-align:right; padding:4px 8px; border:1px solid var(--border); border-radius:4px;" />
                     </div>
                     <div class="form-group" style="margin:10px 0 4px;">
-                        <label>Payment Method</label>
+                        <label>Njia ya Malipo</label>
                         <select id="posPaymentMethod">
                             <option value="cash">Cash</option>
                             <option value="mobile_money">Mobile Money</option>
@@ -36,11 +50,11 @@ async function renderPosPage(container) {
                             <option value="credit">Credit</option>
                         </select>
                     </div>
-                    <div class="summary-row total"><span>Total</span><span id="posTotal">${formatMoney(0)}</span></div>
+                    <div class="summary-row total"><span>Jumla</span><span id="posTotal">${formatMoney(0)}</span></div>
                     <button class="btn btn-green" style="width:100%; justify-content:center; margin-top:12px; padding:13px;" id="posCheckoutBtn" onclick="handleCheckout()">
-                        Complete Sale
+                        Kamilisha Mauzo
                     </button>
-                    <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:8px;" onclick="clearCart()">Clear Cart</button>
+                    <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:8px;" onclick="clearCart()">Futa Kikapu</button>
                 </div>
             </div>
         </div>
@@ -50,16 +64,80 @@ async function renderPosPage(container) {
         clearTimeout(posSearchTimeout);
         const q = e.target.value.trim();
         if (q.length < 1) {
-            document.getElementById('posProductGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div><p>Start typing to search products...</p></div>`;
+            document.getElementById('posProductGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div><p>Anza kuandika ili kutafuta bidhaa...</p></div>`;
             return;
         }
         posSearchTimeout = setTimeout(() => doPosSearch(q), 180); // debounce for fast feel
     });
 
     document.getElementById('posDiscount').addEventListener('input', renderCartSummary);
-
     posCart = [];
     renderCart();
+    try {
+        await loadPosCustomers();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+async function loadPosCustomers(selectedCustomerId = '') {
+    const select = document.getElementById('posCustomer');
+    if (!select) return;
+    const res = await Api.listCustomers();
+    select.innerHTML = `
+        <option value="">Mteja wa kawaida (Generic)</option>
+        ${res.customers.map(customer => `
+            <option value="${customer.id}">${escapeHtml(customer.name)}${customer.phone ? ` — ${escapeHtml(customer.phone)}` : ''}</option>
+        `).join('')}
+    `;
+    if (selectedCustomerId && res.customers.some(customer => String(customer.id) === String(selectedCustomerId))) {
+        select.value = selectedCustomerId;
+    }
+}
+
+function clearPosCustomer() {
+    const select = document.getElementById('posCustomer');
+    if (select) select.value = '';
+}
+
+function openPosCustomerModal() {
+    openModal(`
+        <div class="modal">
+            <div class="modal-header"><h3>Ongeza Mteja</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label for="posNewCustomerName">Jina la Mteja</label><input type="text" id="posNewCustomerName" required /></div>
+                <div class="form-row">
+                    <div class="form-group"><label for="posNewCustomerPhone">Simu</label><input type="text" id="posNewCustomerPhone" /></div>
+                    <div class="form-group"><label for="posNewCustomerEmail">Barua pepe</label><input type="email" id="posNewCustomerEmail" /></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitPosCustomer()">Hifadhi Mteja</button>
+            </div>
+        </div>
+    `);
+    document.getElementById('posNewCustomerName').focus();
+}
+
+async function submitPosCustomer() {
+    const name = document.getElementById('posNewCustomerName').value.trim();
+    if (!name) {
+        showError('Jina la mteja linahitajika.');
+        return;
+    }
+    try {
+        const res = await Api.createCustomer({
+            name,
+            phone: document.getElementById('posNewCustomerPhone').value.trim(),
+            email: document.getElementById('posNewCustomerEmail').value.trim()
+        });
+        closeModal();
+        showToast('Mteja ameongezwa kwa mafanikio');
+        await loadPosCustomers(res.customerId);
+    } catch (err) {
+        showError(err);
+    }
 }
 
 async function doPosSearch(query) {
@@ -71,11 +149,11 @@ async function doPosSearch(query) {
             grid.innerHTML = `
                 <div class="empty-state" style="grid-column:1/-1;">
                     <div class="icon">📦</div>
-                    <p>No matching products in stock.</p>
+                    <p>Hakuna bidhaa zinazolingana kwenye hisa.</p>
                     <p style="font-size:11.5px; color:var(--text-muted); margin-top:6px; max-width:320px; margin-left:auto; margin-right:auto;">
-                        If you just added this product, make sure a <strong>Batch</strong> with quantity was added too —
-                        products with zero stock don't appear here. Ask your Manager or Store Keeper to check
-                        "Products & Stock".
+                        Ikiwa uliongeza bidhaa hivi punde, hakikisha <strong>Batch</strong> yenye kiasi pia imeongezwa —
+                        bidhaa zenye hisa sifuri hazionekani hapa. Uliza Meneja au Msimamizi wa Hisa kuangalia
+                        "Bidhaa & Hisa".
                     </p>
                 </div>`;
             return;
@@ -84,12 +162,12 @@ async function doPosSearch(query) {
             <div class="pos-product-card" onclick="addToCart(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', '${p.unit}', ${p.next_price || 0}, ${p.total_stock})">
                 <div class="pname">${escapeHtml(p.name)}</div>
                 <div class="pprice">${formatMoney(p.next_price)}</div>
-                <div class="pstock">${p.total_stock} ${escapeHtml(p.unit)} in stock</div>
+                <div class="pstock">${p.total_stock} ${escapeHtml(p.unit)} kwenye hisa</div>
             </div>
         `).join('');
     } catch (err) {
         console.error('POS SEARCH ERROR DETAIL:', err);
-        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">⚠️</div><p>Search failed. Try again.</p></div>`;
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">⚠️</div><p>Utafutaji umeshindikana. Jaribu tena.</p></div>`;
     }
 }
 
@@ -97,12 +175,12 @@ function addToCart(productId, name, unit, price, maxStock) {
     const existing = posCart.find(i => i.productId === productId);
     if (existing) {
         if (existing.qty + 1 > maxStock) {
-            showError(`Only ${maxStock} ${unit} available for ${name}`);
+            showError(`Inapatikana ${maxStock} ${unit} tu kwa ${name}`);
             return;
         }
         existing.qty += 1;
     } else {
-        if (maxStock < 1) { showError(`${name} is out of stock`); return; }
+        if (maxStock < 1) { showError(`${name} haina hisa`); return; }
         posCart.push({ productId, name, unit, price, qty: 1, maxStock });
     }
     renderCart();
@@ -115,7 +193,7 @@ function updateCartQty(productId, delta) {
     if (newQty <= 0) {
         posCart = posCart.filter(i => i.productId !== productId);
     } else if (newQty > item.maxStock) {
-        showError(`Only ${item.maxStock} ${item.unit} available`);
+        showError(`Inapatikana ${item.maxStock} ${item.unit} tu`);
         return;
     } else {
         item.qty = newQty;
@@ -137,7 +215,7 @@ function renderCart() {
     const holder = document.getElementById('posCartItems');
     if (!holder) return;
     if (posCart.length === 0) {
-        holder.innerHTML = `<div class="empty-state"><div class="icon">🛒</div><p>Cart is empty</p></div>`;
+        holder.innerHTML = `<div class="empty-state"><div class="icon">🛒</div><p>Kikapu kimepangwa wazi</p></div>`;
     } else {
         holder.innerHTML = posCart.map(item => `
             <div class="cart-item">
@@ -180,12 +258,14 @@ async function handleCheckout() {
     try {
         const payload = {
             items: posCart.map(i => ({ productId: i.productId, quantity: i.qty })),
+            customerId: document.getElementById('posCustomer')?.value || null,
             discountAmount: discount,
             paymentMethod
         };
         const res = await Api.createSale(payload);
-        showToast(`Sale completed: ${res.sale.saleNumber}`, 'success');
+        showToast(`Mauzo yamekamilika: ${res.sale.saleNumber}`, 'success');
         clearCart();
+        clearPosCustomer();
         document.getElementById('posDiscount').value = 0;
         document.getElementById('posSearchInput').value = '';
         document.getElementById('posProductGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div><p>Start typing to search products...</p></div>`;
@@ -194,6 +274,6 @@ async function handleCheckout() {
         showError(err);
     } finally {
         btn.disabled = posCart.length === 0;
-        btn.textContent = 'Complete Sale';
+        btn.textContent = 'Kamilisha Mauzo';
     }
 }

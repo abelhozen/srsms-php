@@ -22,7 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    requireCsrf();
     $body = getJsonBody();
+
     $fullName = bodyValue($body, 'fullName');
     $email = bodyValue($body, 'email');
     $phone = bodyValue($body, 'phone');

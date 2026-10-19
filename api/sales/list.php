@@ -4,14 +4,14 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['cashier', 'manager', 'super_admin', 'owner', 'accountant', 'auditor']);
+$user = requireRole(['cashier', 'manager', 'super_admin', 'admin', 'owner', 'accountant', 'auditor']);
 $pdo = getDB();
 
 $from = $_GET['from'] ?? null;
 $to = $_GET['to'] ?? null;
 $cashierId = $_GET['cashierId'] ?? null;
 $status = $_GET['status'] ?? null;
-$limit = (int)($_GET['limit'] ?? 200);
+$limit = max(1, min(500, (int)($_GET['limit'] ?? 200)));
 
 $sql = "
     SELECT s.id, s.sale_number, s.subtotal, s.discount_amount, s.tax_amount, s.total_amount,

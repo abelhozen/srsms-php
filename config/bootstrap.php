@@ -6,6 +6,10 @@
 
 define('SRSMS_BOOTSTRAPPED', true);
 
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('session.use_strict_mode', '1');
+
 if (session_status() === PHP_SESSION_NONE) {
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
     session_set_cookie_params([
@@ -25,6 +29,11 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 header('Cache-Control: no-store, no-cache, must-revalidate, private');
 header('Pragma: no-cache');
+header('X-XSS-Protection: 1; mode=block');
+if (!empty($isHttps)) {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'");
 
 require_once __DIR__ . '/database.php';
 
@@ -132,3 +141,64 @@ function requireFields($body, $fields) {
         jsonError('Missing required field(s): ' . implode(', ', $missing), 400);
     }
 }
+
+// ---- CSRF helpers (for session-cookie based auth) ----
+
+/**
+ * Provide a CSRF token for the frontend to send with every state-changing request.
+ * Token is session-bound.
+ */
+function csrfToken() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function requireCsrf() {
+    // Allow safe methods.
+    $m = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if (in_array($m, ['GET','HEAD','OPTIONS'], true)) return;
+
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $csrf = null;
+
+    // Prefer header
+    if (is_array($headers)) {
+        foreach ($headers as $k => $v) {
+            if (strtolower($k) === 'x-csrf-token') { $csrf = $v; break; }
+        }
+    }
+
+    // Also allow body field for compatibility
+    if ($csrf === null) {
+        $body = getJsonBody();
+        if (is_array($body) && array_key_exists('csrfToken', $body)) {
+            $csrf = $body['csrfToken'];
+        }
+    }
+
+    if (!$csrf || empty($_SESSION['csrf_token']) || !hash_equals((string)$_SESSION['csrf_token'], (string)$csrf)) {
+        jsonError('CSRF validation failed', 419);
+    }
+}
+
+// ---- Rate limiting helpers (login hardening) ----
+
+function rateLimitHit($key, $limit, $windowSeconds) {
+    $now = time();
+    if (!isset($_SESSION['rl'][$key])) {
+        $_SESSION['rl'][$key] = ['count' => 0, 'reset_at' => $now + $windowSeconds];
+    }
+
+    $bucket = $_SESSION['rl'][$key];
+    if ($now >= (int)$bucket['reset_at']) {
+        $bucket = ['count' => 0, 'reset_at' => $now + $windowSeconds];
+    }
+
+    $bucket['count']++;
+    $_SESSION['rl'][$key] = $bucket;
+
+    return $bucket['count'] <= $limit;
+}
+

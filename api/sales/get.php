@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['cashier', 'manager', 'super_admin', 'owner', 'accountant', 'auditor']);
+$user = requireRole(['cashier', 'manager', 'super_admin', 'admin', 'owner', 'accountant', 'auditor']);
 $pdo = getDB();
 
 $id = $_GET['id'] ?? null;

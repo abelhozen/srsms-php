@@ -7,7 +7,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['super_admin', 'owner', 'manager', 'accountant', 'auditor']);
+$user = requireRole(['super_admin', 'admin', 'owner', 'manager', 'accountant', 'auditor']);
 $pdo = getDB();
 
 $date = $_GET['date'] ?? date('Y-m-d');

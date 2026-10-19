@@ -5,7 +5,7 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['super_admin', 'owner']);
+$user = requirePermission('users.manage');
 $pdo = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -19,7 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrf();
     $body = getJsonBody();
+
     requireFields($body, ['fullName', 'username', 'password', 'roleId']);
 
     $fullName = trim($body['fullName']);
@@ -28,6 +30,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = bodyValue($body, 'phone');
     $password = $body['password'];
     $roleId = $body['roleId'];
+
+    if (!filter_var($roleId, FILTER_VALIDATE_INT) || (int)$roleId < 1) {
+        jsonError('A valid role is required', 400);
+    }
+    $roleCheck = $pdo->prepare("SELECT id, name FROM roles WHERE id = ?");
+    $roleCheck->execute([(int)$roleId]);
+    $selectedRole = $roleCheck->fetch();
+    if (!$selectedRole) {
+        jsonError('Selected role does not exist', 400);
+    }
+    if ($user['role'] !== 'super_admin' && $selectedRole['name'] === 'super_admin') {
+        jsonError('Only a Super Admin can assign the Super Admin role', 403);
+    }
 
     if (strlen($password) < 6) {
         jsonError('Password must be at least 6 characters', 400);
@@ -43,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare(
         "INSERT INTO users (full_name, username, email, phone, password_hash, role_id) VALUES (?, ?, ?, ?, ?, ?)"
     );
-    $stmt->execute([$fullName, $username, $email, $phone, $hash, $roleId]);
+    $stmt->execute([$fullName, $username, $email, $phone, $hash, (int)$roleId]);
 
     logAudit($user['id'], 'USER_CREATED', 'users', "Created user $username");
     jsonSuccess(['message' => 'User created successfully', 'userId' => $pdo->lastInsertId()], 201);

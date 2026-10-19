@@ -4,14 +4,14 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-requireRole(['super_admin', 'owner', 'auditor']);
+$user = requireRole(['super_admin', 'admin', 'owner', 'auditor']);
 $pdo = getDB();
 
 $from = $_GET['from'] ?? null;
 $to = $_GET['to'] ?? null;
 $userId = $_GET['userId'] ?? null;
 $action = $_GET['action'] ?? null;
-$limit = (int)($_GET['limit'] ?? 300);
+$limit = max(1, min(500, (int)($_GET['limit'] ?? 150)));
 
 $sql = "
     SELECT al.id, al.action, al.module, al.description, al.ip_address, al.created_at,

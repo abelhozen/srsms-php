@@ -77,8 +77,17 @@ CREATE TABLE settings (
     phone VARCHAR(30),
     low_stock_threshold INT DEFAULT 10,
     expiry_alert_days INT DEFAULT 30,
+    backup_retention_period ENUM('day','week','month','year') NOT NULL DEFAULT 'week',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+CREATE TABLE backup_files (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    retention_period ENUM('day','week','month','year') NOT NULL,
+    size_bytes BIGINT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
 -- CATEGORIES & SUPPLIERS

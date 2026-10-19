@@ -3,13 +3,13 @@
    ============================================================ */
 
 async function renderSalesPage(container) {
-    const canSeeRegister = ['super_admin', 'owner', 'manager', 'accountant', 'auditor'].includes(Store.user.role);
+    const canSeeRegister = ['super_admin', 'admin', 'owner', 'manager', 'accountant', 'auditor'].includes(Store.user.role);
 
     container.innerHTML = `
         ${canSeeRegister ? `
         <div class="tabs" id="salesTabs">
-            <button class="tab-btn active" data-tab="history" onclick="switchSalesTab('history')">Sales History</button>
-            <button class="tab-btn" data-tab="register" onclick="switchSalesTab('register')">📋 Daily Register</button>
+            <button class="tab-btn active" data-tab="history" onclick="switchSalesTab('history')">Historia ya Mauzo</button>
+            <button class="tab-btn" data-tab="register" onclick="switchSalesTab('register')">📋 Rejesta ya Kila Siku</button>
         </div>` : ''}
         <div id="salesTabContent"></div>
     `;
@@ -35,12 +35,21 @@ function switchSalesTab(tab) {
 
 async function renderSalesHistoryTab() {
     const holder = document.getElementById('salesTabContent');
+    const canClearHistory = ['super_admin', 'admin', 'owner'].includes(Store.user.role);
     holder.innerHTML = `
-        <div style="display:flex; gap:10px; margin-bottom:18px; align-items:center;">
-            <div class="form-group" style="margin:0;"><input type="date" id="salesFrom" value="${daysAgoISO(30)}" style="padding:8px 12px; border:1.5px solid var(--border); border-radius:6px;" /></div>
-            <span style="color:var(--text-muted);">to</span>
-            <div class="form-group" style="margin:0;"><input type="date" id="salesTo" value="${todayISO()}" style="padding:8px 12px; border:1.5px solid var(--border); border-radius:6px;" /></div>
-            <button class="btn btn-outline btn-sm" onclick="loadSalesTable()">Filter</button>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:18px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0;"><input type="date" id="salesFrom" value="${daysAgoISO(30)}" style="padding:8px 12px; border:1.5px solid var(--border); border-radius:6px;" /></div>
+                <span style="color:var(--text-muted);">hadi</span>
+                <div class="form-group" style="margin:0;"><input type="date" id="salesTo" value="${todayISO()}" style="padding:8px 12px; border:1.5px solid var(--border); border-radius:6px;" /></div>
+                <button class="btn btn-outline btn-sm" onclick="loadSalesTable()">Chuja</button>
+            </div>
+            ${canClearHistory ? `
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-sm" onclick="handleClearSalesHistory()">Futa Chujio</button>
+                    <button class="btn btn-danger btn-sm" onclick="handleClearAllSalesHistory()">Futa Historia Yote</button>
+                </div>
+            ` : ''}
         </div>
         <div class="card">
             <div class="card-body" style="padding:0;" id="salesTableHolder">
@@ -62,16 +71,16 @@ async function loadSalesTable() {
         const res = await Api.listSales(`?from=${from}&to=${to} 23:59:59`);
         const sales = res.sales;
         if (sales.length === 0) {
-            holder.innerHTML = `<div class="empty-state"><div class="icon">🧾</div><p>No sales in this period.</p></div>`;
+            holder.innerHTML = `<div class="empty-state"><div class="icon">🧾</div><p>Hakuna mauzo katika kipindi hiki.</p></div>`;
             return;
         }
         holder.innerHTML = `
             <table>
                 <thead>
                     <tr>
-                        <th>Sale #</th><th>Date</th><th>Cashier</th><th>Total</th>
-                        ${!isCashier ? '<th>Profit</th>' : ''}
-                        <th>Payment</th><th>Status</th><th></th>
+                        <th>Namba ya Mauzo</th><th>Tarehe</th><th>Mkasishaji</th><th>Jumla</th>
+                        ${!isCashier ? '<th>Faida</th>' : ''}
+                        <th>Malipo</th><th>Hali</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,8 +94,8 @@ async function loadSalesTable() {
                             <td style="text-transform:capitalize;">${escapeHtml((s.payment_method || '').replace('_',' '))}</td>
                             <td>${statusBadge(s.status)}</td>
                             <td>
-                                <button class="btn btn-outline btn-sm" onclick="viewSaleDetail(${s.id})">View</button>
-                                ${canVoid && s.status === 'completed' ? `<button class="btn btn-danger btn-sm" onclick="handleVoidSale(${s.id})">Void</button>` : ''}
+                                <button class="btn btn-outline btn-sm" onclick="viewSaleDetail(${s.id})">Angalia</button>
+                                ${canVoid && s.status === 'completed' ? `<button class="btn btn-danger btn-sm" onclick="handleVoidSale(${s.id})">Futa/Ubatilishe</button>` : ''}
                             </td>
                         </tr>
                     `).join('')}
@@ -94,7 +103,7 @@ async function loadSalesTable() {
             </table>
         `;
     } catch (err) {
-        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load sales.</p></div>`;
+        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia mauzo.</p></div>`;
     }
 }
 
@@ -110,8 +119,8 @@ async function renderDailyRegisterTab() {
             <div class="form-group" style="margin:0;">
                 <input type="date" id="registerDate" value="${todayISO()}" max="${todayISO()}" style="padding:8px 12px; border:1.5px solid var(--border); border-radius:6px;" />
             </div>
-            <button class="btn btn-outline btn-sm" onclick="loadDailyRegister()">View Day</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('registerDate').value='${todayISO()}'; loadDailyRegister();">Today</button>
+            <button class="btn btn-outline btn-sm" onclick="loadDailyRegister()">Angalia Tarehe</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('registerDate').value='${todayISO()}'; loadDailyRegister();">Leo</button>
         </div>
         <div id="registerContent"><div class="loading-spinner" style="margin:40px auto;"></div></div>
     `;
@@ -130,31 +139,31 @@ async function loadDailyRegister() {
         content.innerHTML = `
             <div class="kpi-grid">
                 <div class="kpi-card">
-                    <div class="kpi-label">${isToday ? "Today's" : formatDate(date)} Total Sales</div>
+                    <div class="kpi-label">Jumla ya Mauzo ${isToday ? "ya Leo" : "ya " + formatDate(date)}</div>
                     <div class="kpi-value">${formatMoney(totals.totalSales)}</div>
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">${totals.saleCount} transaction(s)</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">${totals.saleCount} muamala</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-label">Profit Earned</div>
+                    <div class="kpi-label">Faida Iliofikiwa</div>
                     <div class="kpi-value" style="color:${totals.totalProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${formatMoney(totals.totalProfit)}</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-label">Discounts Given</div>
+                    <div class="kpi-label">Punguzo Zilizotolewa</div>
                     <div class="kpi-value">${formatMoney(totals.totalDiscount)}</div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-label">Items Sold</div>
+                    <div class="kpi-label">Vipengee Vilivyouzwa</div>
                     <div class="kpi-value">${lines.reduce((sum, l) => sum + parseFloat(l.quantity), 0)}</div>
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">across ${lines.length} line(s)</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">kwa mistari ${lines.length}</div>
                 </div>
             </div>
 
             <div class="card" style="margin-top:18px;">
-                <div class="card-header"><h3>Sales by Cashier</h3></div>
+                <div class="card-header"><h3>Mauzo kwa Mkasishaji</h3></div>
                 <div class="card-body" style="padding:0;">
-                    ${byCashier.length === 0 ? `<div class="empty-state"><div class="icon">🧾</div><p>No sales recorded for this day.</p></div>` : `
+                    ${byCashier.length === 0 ? `<div class="empty-state"><div class="icon">🧾</div><p>Hakuna mauzo yaliorekodiwa kwa siku hii.</p></div>` : `
                     <table>
-                        <thead><tr><th>Cashier</th><th>Transactions</th><th>Total Sales</th><th>Profit</th></tr></thead>
+                        <thead><tr><th>Mkasishaji</th><th>Miamala</th><th>Jumla ya Mauzo</th><th>Faida</th></tr></thead>
                         <tbody>
                             ${byCashier.map(c => `
                                 <tr>
@@ -171,10 +180,10 @@ async function loadDailyRegister() {
 
             ${voided.length > 0 ? `
             <div class="card" style="margin-top:18px; border-color:var(--accent-red);">
-                <div class="card-header"><h3 style="color:var(--accent-red);">⚠ Voided Sales (${voided.length})</h3></div>
+                <div class="card-header"><h3 style="color:var(--accent-red);">⚠ Mauzo Yaliyobatilishwa (${voided.length})</h3></div>
                 <div class="card-body" style="padding:0;">
                     <table>
-                        <thead><tr><th>Sale #</th><th>Cashier</th><th>Amount</th><th>Time</th></tr></thead>
+                        <thead><tr><th>Namba ya Mauzo</th><th>Mkasishaji</th><th>Kiasi</th><th>Muda</th></tr></thead>
                         <tbody>
                             ${voided.map(v => `
                                 <tr>
@@ -191,13 +200,13 @@ async function loadDailyRegister() {
 
             <div class="card" style="margin-top:18px;">
                 <div class="card-header">
-                    <h3>Every Item Sold ${isToday ? 'Today' : 'on ' + formatDate(date)}</h3>
-                    <span class="badge badge-gray">${lines.length} line item(s)</span>
+                    <h3>Kila Kipengee Kilichouzwa ${isToday ? 'Leo' : 'tarehe ' + formatDate(date)}</h3>
+                    <span class="badge badge-gray">${lines.length} mistari</span>
                 </div>
                 <div class="card-body" style="padding:0;">
-                    ${lines.length === 0 ? `<div class="empty-state"><div class="icon">📦</div><p>Nothing sold yet for this day.</p></div>` : `
+                    ${lines.length === 0 ? `<div class="empty-state"><div class="icon">📦</div><p>Hakuna kitu kilichouzwa bado kwa siku hii.</p></div>` : `
                     <table>
-                        <thead><tr><th>Time</th><th>Product</th><th>Qty</th><th>Sold By</th><th>Amount</th><th>Profit</th><th>Sale #</th></tr></thead>
+                        <thead><tr><th>Muda</th><th>Bidhaa</th><th>Kiasi</th><th>Iliyouzwa Na</th><th>Kiasi</th><th>Faida</th><th>Namba ya Mauzo</th></tr></thead>
                         <tbody>
                             ${lines.map(l => `
                                 <tr style="${l.status === 'voided' ? 'opacity:0.5;' : ''}">
@@ -219,7 +228,7 @@ async function loadDailyRegister() {
             </div>
         `;
     } catch (err) {
-        content.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${escapeHtml(err.message || 'Failed to load daily register.')}</p></div>`;
+        content.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>${escapeHtml(err.message || 'Imeshindikana kupakia rejesta ya kila siku.')}</p></div>`;
     }
 }
 
@@ -233,13 +242,13 @@ async function viewSaleDetail(saleId) {
 
         openModal(`
             <div class="modal">
-                <div class="modal-header"><h3>Receipt — ${escapeHtml(sale.sale_number)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+                <div class="modal-header"><h3>Risiti — ${escapeHtml(sale.sale_number)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
                 <div class="modal-body">
                     <div style="font-size:12.5px; color:var(--text-secondary); margin-bottom:14px;">
-                        ${formatDateTime(sale.created_at)} · Cashier: ${escapeHtml(sale.cashier_name)}
+                        ${formatDateTime(sale.created_at)} · Mkasishaji: ${escapeHtml(sale.cashier_name)}
                     </div>
                     <table>
-                        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                        <thead><tr><th>Bidhaa</th><th>Kiasi</th><th>Bei</th><th>Jumla</th></tr></thead>
                         <tbody>
                             ${items.map(i => `
                                 <tr>
@@ -252,14 +261,14 @@ async function viewSaleDetail(saleId) {
                         </tbody>
                     </table>
                     <div style="margin-top:16px; padding-top:14px; border-top:1.5px dashed var(--border);">
-                        <div class="summary-row"><span>Subtotal</span><span>${formatMoney(sale.subtotal)}</span></div>
-                        <div class="summary-row"><span>Discount</span><span>${formatMoney(sale.discount_amount)}</span></div>
-                        <div class="summary-row"><span>Tax</span><span>${formatMoney(sale.tax_amount)}</span></div>
-                        <div class="summary-row total"><span>Total</span><span>${formatMoney(sale.total_amount)}</span></div>
-                        ${!isCashier ? `<div class="summary-row" style="color:var(--accent-green);"><span>Profit</span><span>${formatMoney(sale.profit_amount)}</span></div>` : ''}
+                        <div class="summary-row"><span>Jumla Ndogo</span><span>${formatMoney(sale.subtotal)}</span></div>
+                        <div class="summary-row"><span>Punguzo</span><span>${formatMoney(sale.discount_amount)}</span></div>
+                        <div class="summary-row"><span>Kodi</span><span>${formatMoney(sale.tax_amount)}</span></div>
+                        <div class="summary-row total"><span>Jumla</span><span>${formatMoney(sale.total_amount)}</span></div>
+                        ${!isCashier ? `<div class="summary-row" style="color:var(--accent-green);"><span>Faida</span><span>${formatMoney(sale.profit_amount)}</span></div>` : ''}
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
+                <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Funga</button></div>
             </div>
         `);
     } catch (err) {
@@ -269,10 +278,43 @@ async function viewSaleDetail(saleId) {
 }
 
 async function handleVoidSale(saleId) {
-    if (!confirm('Void this sale? Stock will be restored and this action cannot be undone.')) return;
+    if (!confirm('Ubatilishe mauzo haya? Hisa itarejeshwa na hatua hii haiwezi kutenduliwa nyuma.')) return;
     try {
         await Api.voidSale(saleId);
-        showToast('Sale voided and stock restored');
+        showToast('Mauzo yamebatilishwa na hisa zarejeshwa');
+        loadSalesTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+async function handleClearSalesHistory() {
+    const from = document.getElementById('salesFrom')?.value;
+    const to = document.getElementById('salesTo')?.value;
+    const period = from || to ? `${from || 'beginning'} to ${to || 'now'}` : 'all time';
+    const warning = `Futa historia ya mauzo kwa ${period}? Hii huondoa risiti/malipo kutoka Historia ya Mauzo na ripoti. Hisa HAZITA rejeshwa.`;
+    if (!confirm(warning)) return;
+    if (!confirm('Thibitisha tena. Hatua hii haiwezi kutenduliwa nyuma.')) return;
+
+    try {
+        const res = await Api.clearSalesHistory({
+            from: from || null,
+            to: to ? `${to} 23:59:59` : null
+        });
+        showToast(`${res.deletedCount || 0} mauzo yamefutwa`);
+        loadSalesTable();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+async function handleClearAllSalesHistory() {
+    if (!confirm('Futa HISTORIA YOTE ya mauzo? Hii huondoa kila risiti/malipo kutoka Historia ya Mauzo na ripoti. Hisa HAZITA rejeshwa.')) return;
+    if (!confirm('Thibitisha tena: futa HISTORIA YOTE ya mauzo kabisa?')) return;
+
+    try {
+        const res = await Api.clearSalesHistory({ from: null, to: null });
+        showToast(`${res.deletedCount || 0} sale(s) cleared`);
         loadSalesTable();
     } catch (err) {
         showError(err);

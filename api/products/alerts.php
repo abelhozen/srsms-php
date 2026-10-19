@@ -19,6 +19,7 @@ if ($type === 'low-stock') {
         GROUP BY p.id
         HAVING total_stock <= p.reorder_level
         ORDER BY total_stock ASC
+        LIMIT 100
     ");
     jsonSuccess(['lowStock' => $stmt->fetchAll()]);
 }
@@ -37,6 +38,7 @@ if ($type === 'expiring') {
           AND b.expiry_date IS NOT NULL
           AND b.expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
         ORDER BY b.expiry_date ASC
+        LIMIT 100
     ");
     $stmt->execute([$days]);
     jsonSuccess(['expiringSoon' => $stmt->fetchAll()]);

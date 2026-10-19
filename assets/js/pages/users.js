@@ -1,31 +1,133 @@
 /* ============================================================
+
    Users & Roles Management Page (Super Admin / Admin)
    ============================================================ */
 
+let rolePermissionEditorState = null;
+
 async function renderUsersPage(container) {
-    const canManageUsers = ['super_admin', 'owner'].includes(Store.user.role);
+    const canManageUsers = hasUserManagementAccess();
     container.innerHTML = `
-        <div style="display:flex; justify-content:flex-end; margin-bottom:18px;">
-            ${canManageUsers ? '<button class="btn btn-dark" onclick="openCreateUserModal()">+ Add User</button>' : ''}
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:18px;">
+            ${canManageUsers ? '<button class="btn btn-outline" id="manageRolePermissionsBtn"><i class="fa-solid fa-shield-halved"></i> Ruhusa za Majukumu</button>' : ''}
+            ${canManageUsers ? '<button class="btn btn-dark" onclick="openCreateUserModal()">+ Ongeza Mtumiaji</button>' : ''}
         </div>
+        <section class="role-permission-editor" id="rolePermissionsPanel" hidden></section>
         <div class="card">
             <div class="card-body" style="padding:0;" id="usersTableHolder">
                 <div class="loading-spinner" style="margin:40px auto;"></div>
             </div>
         </div>
     `;
+    document.getElementById('manageRolePermissionsBtn')?.addEventListener('click', openRolePermissionsPanel);
     await loadUsersTable();
+}
+
+async function openRolePermissionsPanel() {
+    if (!ensureUserManagementAccess()) return;
+    const panel = document.getElementById('rolePermissionsPanel');
+    try {
+        const result = await Api.listRoles();
+        const roles = result.roles.filter(role => role.name !== 'super_admin');
+        if (!roles.length) {
+            showError('Hakuna majukumu yanayoweza kusanidiwa.');
+            return;
+        }
+        rolePermissionEditorState = { roles, permissions: result.permissions };
+        panel.hidden = false;
+        panel.innerHTML = `
+            <div class="role-permission-editor-header">
+                <h2>Ruhusa za Majukumu</h2>
+                <button class="btn btn-outline btn-sm" id="closeRolePermissionsBtn" aria-label="Funga ruhusa za majukumu"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="role-permission-editor-controls">
+                <label for="rolePermissionsSelect">Chagua jukumu</label>
+                <select id="rolePermissionsSelect">
+                    ${roles.map(role => `<option value="${role.id}" ${String(role.id) === String(Store.user.roleId) ? 'selected' : ''}>${escapeHtml(role.label)}</option>`).join('')}
+                </select>
+            </div>
+            <div id="rolePermissionOptions"></div>
+            <div class="role-permission-editor-footer">
+                <button class="btn btn-dark" id="saveRolePermissionsBtn"><i class="fa-solid fa-floppy-disk"></i> Hifadhi Ruhusa</button>
+            </div>
+        `;
+        document.getElementById('closeRolePermissionsBtn').addEventListener('click', () => { panel.hidden = true; });
+        document.getElementById('rolePermissionsSelect').addEventListener('change', renderRolePermissionControls);
+        document.getElementById('saveRolePermissionsBtn').addEventListener('click', saveRolePermissions);
+        renderRolePermissionControls();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+function renderRolePermissionControls() {
+    const state = rolePermissionEditorState;
+    const roleId = document.getElementById('rolePermissionsSelect')?.value;
+    const role = state?.roles.find(item => String(item.id) === String(roleId));
+    const target = document.getElementById('rolePermissionOptions');
+    if (!role || !target) return;
+
+    const enabledIds = new Set(role.permissions.map(permission => String(permission.id)));
+    const permissionsByModule = {};
+    state.permissions.forEach(permission => {
+        const module = permission.module || 'other';
+        if (!permissionsByModule[module]) permissionsByModule[module] = [];
+        permissionsByModule[module].push(permission);
+    });
+
+    target.innerHTML = Object.entries(permissionsByModule).map(([module, permissions]) => `
+        <section class="role-permission-config-module">
+            <h3>${escapeHtml(module)}</h3>
+            <div class="role-permission-config-list">
+                ${permissions.map(permission => {
+                    const keepAdminAccess = String(role.id) === String(Store.user.roleId) && permission.code === 'users.manage';
+                    return `
+                        <label class="role-permission-option">
+                            <input type="checkbox" name="rolePermission" value="${permission.id}" ${enabledIds.has(String(permission.id)) ? 'checked' : ''} ${keepAdminAccess ? 'disabled' : ''} />
+                            <span>${escapeHtml(permission.label)}</span>
+                        </label>
+                    `;
+                }).join('')}
+            </div>
+        </section>
+    `).join('');
+}
+
+async function saveRolePermissions() {
+    const roleId = document.getElementById('rolePermissionsSelect')?.value;
+    const role = rolePermissionEditorState?.roles.find(item => String(item.id) === String(roleId));
+    if (!role) return;
+
+    const permissionIds = Array.from(document.querySelectorAll('#rolePermissionOptions input[name="rolePermission"]:checked'))
+        .map(input => Number(input.value));
+    const button = document.getElementById('saveRolePermissionsBtn');
+    button.disabled = true;
+    try {
+        await Api.updateRolePermissions(roleId, permissionIds);
+        role.permissions = rolePermissionEditorState.permissions.filter(permission => permissionIds.includes(Number(permission.id)));
+        showToast('Ruhusa za jukumu zimesasishwa');
+        if (String(Store.user.roleId) === String(roleId)) {
+            await bootApp();
+            return;
+        }
+        renderRolePermissionControls();
+    } catch (err) {
+        showError(err);
+    } finally {
+        if (button.isConnected) button.disabled = false;
+    }
 }
 
 async function loadUsersTable() {
     const holder = document.getElementById('usersTableHolder');
-    const canManageUsers = ['super_admin', 'owner'].includes(Store.user.role);
+    const canManageUsers = hasUserManagementAccess();
+    const isSuperAdmin = Store.user.role === 'super_admin';
     try {
         const res = await Api.listUsers();
         const users = res.users;
         holder.innerHTML = `
             <table>
-                <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Last Login</th><th></th></tr></thead>
+                <thead><tr><th>Jina</th><th>Jina la Mtumiaji</th><th>Jukumu</th><th>Hali</th><th>Ingia Mwisho</th><th></th></tr></thead>
                 <tbody>
                     ${users.map(u => `
                         <tr>
@@ -37,61 +139,166 @@ async function loadUsersTable() {
                             <td style="white-space:nowrap;">
                                 ${canManageUsers ? `
                                     <button class="btn btn-outline btn-sm" onclick="openEditUserModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}', '${escapeHtml(u.email||'')}', '${escapeHtml(u.phone||'')}', ${u.role_id}, '${u.status}')"><i class="fa-solid fa-pen"></i></button>
-                                    <button class="btn btn-outline btn-sm" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}')"><i class="fa-solid fa-key"></i></button>
-                                    ${u.id !== Store.user.id ? `<button class="btn btn-danger btn-sm" onclick="handleDisableUser(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}')"><i class="fa-solid fa-user-slash"></i></button>` : ''}
-                                ` : '<span class="badge badge-gray">Read only</span>'}
+                                    ${isSuperAdmin ? `<button class="btn btn-outline btn-sm" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.full_name).replace(/'/g,"\\'")}')"><i class="fa-solid fa-key"></i></button>` : ''}
+                                    ${isSuperAdmin && u.id !== Store.user.id ? `<button class="btn btn-danger btn-sm" data-action="disable-user" data-user-id="${u.id}" data-user-name='${escapeHtml(u.full_name).replace(/'/g,"\\'")}'><i class="fa-solid fa-user-slash"></i></button>` : ''}
+                                ` : '<span class="badge badge-gray">Soma tu</span>'}
                             </td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
         `;
+
+        // single listener for all rows (fast)
+        if (!holder.dataset._userTableBound) {
+            holder.dataset._userTableBound = '1';
+            holder.addEventListener('click', handleUserTableClick);
+        }
+
     } catch (err) {
-        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load users.</p></div>`;
+        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia watumiaji.</p></div>`;
     }
 }
 
+function hasUserManagementAccess() {
+    return Store.user?.role === 'super_admin' || Store.permissions.includes('users.manage');
+}
+
 function ensureUserManagementAccess() {
-    if (!['super_admin', 'owner'].includes(Store.user.role)) {
-        showError('Only Admin and Owner can manage users.');
+    if (!hasUserManagementAccess()) {
+        showError('Huna ruhusa ya kusimamia watumiaji.');
         return false;
     }
     return true;
 }
 
+function renderRolePermissions(roleSelectId, targetId, roles) {
+    const selectedRoleId = document.getElementById(roleSelectId).value;
+    const role = roles.find(item => String(item.id) === String(selectedRoleId));
+    const target = document.getElementById(targetId);
+    if (!role || role.permissions.length === 0) {
+        target.innerHTML = '<p class="role-permissions-empty">Jukumu hili halina ruhusa zilizowekwa.</p>';
+        return;
+    }
+
+    const groupForPermission = permission => {
+        if (/\.view(?:_|$)/.test(permission.code)) return 'View';
+        if (/\.(manage|create)$/.test(permission.code)) return 'Edit';
+        return 'Misc';
+    };
+    const moduleLabels = {
+        admin: 'Administration',
+        audit: 'Audit',
+        dashboard: 'Dashboard',
+        finance: 'Finance',
+        inventory: 'Inventory',
+        reports: 'Reports',
+        sales: 'Sales & POS'
+    };
+    const permissionsByModule = {};
+    role.permissions.forEach(permission => {
+        const module = permission.module || 'other';
+        if (!permissionsByModule[module]) {
+            permissionsByModule[module] = { View: [], Edit: [], Misc: [] };
+        }
+        permissionsByModule[module][groupForPermission(permission)].push(permission);
+    });
+
+    target.innerHTML = `
+        <strong>Ruhusa za ${escapeHtml(role.label)}</strong>
+        <div class="role-permission-modules">
+            ${Object.entries(permissionsByModule).map(([module, groups]) => `
+                <section class="role-permission-module">
+                    <h4>${escapeHtml(moduleLabels[module] || module)}</h4>
+                    <div class="role-permission-groups">
+                        ${['View', 'Edit', 'Misc'].map(group => `
+                            <div class="role-permission-group">
+                                <h5>${group}</h5>
+                                <ul>${groups[group].map(permission => `<li>${escapeHtml(permission.label)}</li>`).join('')}</ul>
+                            </div>
+                        `).join('')}
+                    </div>
+                </section>
+            `).join('')}
+        </div>
+    `;
+}
+
+function disableButton(btnEl, disabled) {
+    if (!btnEl) return;
+    btnEl.disabled = disabled;
+    if (disabled) btnEl.dataset._origText = btnEl.innerHTML;
+    if (disabled) btnEl.innerHTML = 'Working...';
+    else if (btnEl.dataset._origText) btnEl.innerHTML = btnEl.dataset._origText;
+}
+
+function handleUserTableClick(e) {
+    const btn = e.target.closest('button[data-action="disable-user"]');
+    if (!btn) return;
+
+    const id = btn.dataset.userId;
+    const name = btn.dataset.userName || '';
+    if (!id) return;
+
+    // prevent multiple clicks
+    if (btn.disabled) return;
+
+    if (!confirm(`Zima akaunti ya ${name}? Hawawezi kuingia tena.`)) return;
+
+    // run async but keep UI responsive
+    disableButton(btn, true);
+    Api.deleteUser(parseInt(id, 10))
+        .then(() => {
+            showToast('Akaunti imezimwa');
+            loadUsersTable();
+        })
+        .catch(err => showError(err))
+        .finally(() => disableButton(btn, false));
+}
+
+
 async function openCreateUserModal() {
     if (!ensureUserManagementAccess()) return;
-    let roles = [];
-    try { roles = (await Api.listRoles()).roles; } catch { /* ignore */ }
-
-    // allow only Admin (super_admin) and Owner roles in the UI
-    roles = (roles || []).filter(r => r.name === 'super_admin' || r.name === 'owner');
+    let roles;
+    try {
+        roles = (await Api.listRoles()).roles;
+    } catch (err) {
+        showError(err);
+        return;
+    }
+    if (!roles.length) {
+        showError('Hakuna majukumu yaliyosanidiwa kwenye mfumo.');
+        return;
+    }
 
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Add User</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Ongeza Mtumiaji</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Full Name</label><input type="text" id="nuFullName" /></div>
+                <div class="form-group"><label>Jina Kamili</label><input type="text" id="nuFullName" /></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Username</label><input type="text" id="nuUsername" /></div>
-                    <div class="form-group"><label>Role</label>
+                    <div class="form-group"><label>Jina la Mtumiaji</label><input type="text" id="nuUsername" /></div>
+                    <div class="form-group"><label>Jukumu</label>
                         <select id="nuRole">
-                            ${roles.map(r => `<option value="${r.id}">${escapeHtml(r.name === 'super_admin' ? 'Admin' : r.label)}</option>`).join('')}
+                            ${roles.map(r => `<option value="${r.id}">${escapeHtml(r.label)}</option>`).join('')}
                         </select>
                     </div>
                 </div>
+                <div class="role-permissions" id="nuRolePermissions"></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Email</label><input type="email" id="nuEmail" /></div>
-                    <div class="form-group"><label>Phone</label><input type="text" id="nuPhone" /></div>
+                    <div class="form-group"><label>Barua pepe</label><input type="email" id="nuEmail" /></div>
+                    <div class="form-group"><label>Simu</label><input type="text" id="nuPhone" /></div>
                 </div>
-                <div class="form-group"><label>Temporary Password</label><input type="text" id="nuPassword" placeholder="Min. 6 characters" /></div>
+                <div class="form-group"><label>Nenosiri la Muda</label><input type="text" id="nuPassword" placeholder="Angalau herufi 6" /></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitCreateUser()">Create User</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitCreateUser()">Unda Mtumiaji</button>
             </div>
         </div>
     `);
+    document.getElementById('nuRole').addEventListener('change', () => renderRolePermissions('nuRole', 'nuRolePermissions', roles));
+    renderRolePermissions('nuRole', 'nuRolePermissions', roles);
 }
 
 async function submitCreateUser() {
@@ -103,11 +310,11 @@ async function submitCreateUser() {
     const phone = document.getElementById('nuPhone').value.trim();
     const password = document.getElementById('nuPassword').value;
 
-    if (!fullName || !username || !password) { showError('Full name, username and password are required'); return; }
+    if (!fullName || !username || !password) { showError('Jina kamili, jina la mtumiaji na nenosiri vinahitajika'); return; }
 
     try {
         await Api.createUser({ fullName, username, email, phone, password, roleId });
-        showToast('User created successfully');
+        showToast('Mtumiaji ameundwa kwa mafanikio');
         closeModal();
         loadUsersTable();
     } catch (err) {
@@ -117,40 +324,50 @@ async function submitCreateUser() {
 
 async function openEditUserModal(id, fullName, email, phone, roleId, status) {
     if (!ensureUserManagementAccess()) return;
-    let roles = [];
-    try { roles = (await Api.listRoles()).roles; } catch { /* ignore */ }
-    // restrict to Admin and Owner
-    roles = (roles || []).filter(r => r.name === 'super_admin' || r.name === 'owner');
+    let roles;
+    try {
+        roles = (await Api.listRoles()).roles;
+    } catch (err) {
+        showError(err);
+        return;
+    }
+    if (!roles.length) {
+        showError('Hakuna majukumu yaliyosanidiwa kwenye mfumo.');
+        return;
+    }
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Edit User</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Hariri Mtumiaji</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Full Name</label><input type="text" id="euFullName" value="${escapeHtml(fullName)}" /></div>
+                <div class="form-group"><label>Jina Kamili</label><input type="text" id="euFullName" value="${escapeHtml(fullName)}" /></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Email</label><input type="email" id="euEmail" value="${escapeHtml(email)}" /></div>
-                    <div class="form-group"><label>Phone</label><input type="text" id="euPhone" value="${escapeHtml(phone)}" /></div>
+                    <div class="form-group"><label>Barua pepe</label><input type="email" id="euEmail" value="${escapeHtml(email)}" /></div>
+                    <div class="form-group"><label>Simu</label><input type="text" id="euPhone" value="${escapeHtml(phone)}" /></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Role</label>
                         <select id="euRole">
-                            ${roles.map(r => `<option value="${r.id}" ${r.id === roleId ? 'selected' : ''}>${escapeHtml(r.name === 'super_admin' ? 'Admin' : r.label)}</option>`).join('')}
+                            ${roles.map(r => `<option value="${r.id}" ${String(r.id) === String(roleId) ? 'selected' : ''}>${escapeHtml(r.label)}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="form-group"><label>Status</label>
+                    <div class="form-group"><label>Hali</label>
                         <select id="euStatus">
-                            <option value="active" ${status==='active'?'selected':''}>Active</option>
-                            <option value="suspended" ${status==='suspended'?'selected':''}>Suspended</option>
-                            <option value="disabled" ${status==='disabled'?'selected':''}>Disabled</option>
+                            <option value="active" ${status==='active'?'selected':''}>Inatumika</option>
+                            <option value="suspended" ${status==='suspended'?'selected':''}>Imesimamishwa</option>
+                            <option value="disabled" ${status==='disabled'?'selected':''}>Imezimwa</option>
                         </select>
                     </div>
                 </div>
+                <div class="role-permissions" id="euRolePermissions"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitEditUser(${id})">Save Changes</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitEditUser(${id})">Hifadhi Mabadiliko</button>
             </div>
         </div>
     `);
+    document.getElementById('euRole').addEventListener('change', () => renderRolePermissions('euRole', 'euRolePermissions', roles));
+    renderRolePermissions('euRole', 'euRolePermissions', roles);
 }
 
 async function submitEditUser(id) {
@@ -163,7 +380,7 @@ async function submitEditUser(id) {
             roleId: document.getElementById('euRole').value,
             status: document.getElementById('euStatus').value
         });
-        showToast('User updated successfully');
+        showToast('Mtumiaji amesasishwa kwa mafanikio');
         closeModal();
         loadUsersTable();
     } catch (err) {
@@ -175,13 +392,13 @@ function openResetPasswordModal(id, fullName) {
     if (!ensureUserManagementAccess()) return;
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Reset Password — ${escapeHtml(fullName)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Rekebisha Nenosiri — ${escapeHtml(fullName)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>New Password</label><input type="text" id="rpPassword" placeholder="Min. 6 characters" /></div>
+                <div class="form-group"><label>Nenosiri Jipya</label><input type="text" id="rpPassword" placeholder="Angalau herufi 6" /></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitResetPassword(${id})">Reset Password</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitResetPassword(${id})">Rekebisha Nenosiri</button>
             </div>
         </div>
     `);
@@ -190,10 +407,10 @@ function openResetPasswordModal(id, fullName) {
 async function submitResetPassword(id) {
     if (!ensureUserManagementAccess()) return;
     const newPassword = document.getElementById('rpPassword').value;
-    if (!newPassword || newPassword.length < 6) { showError('Password must be at least 6 characters'); return; }
+    if (!newPassword || newPassword.length < 6) { showError('Nenosiri lazima liwe na angalau herufi 6'); return; }
     try {
         await Api.resetPassword(id, newPassword);
-        showToast('Password reset successfully');
+        showToast('Nenosiri limebadilishwa kwa mafanikio');
         closeModal();
     } catch (err) {
         showError(err);
@@ -201,6 +418,7 @@ async function submitResetPassword(id) {
 }
 
 async function handleDisableUser(id, fullName) {
+    // kept for backward compatibility (inline onclick in older builds)
     if (!ensureUserManagementAccess()) return;
     if (!confirm(`Disable account for ${fullName}? They will no longer be able to log in.`)) return;
     try {

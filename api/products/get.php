@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $stmt = $pdo->prepare("SELECT created_by FROM products WHERE id = ?");
     $stmt->execute([$id]);
     $productOwner = $stmt->fetch();
-    $canManage = in_array($user['role'], ['super_admin', 'owner']) || ($productOwner && (int)$productOwner['created_by'] === (int)$user['id']);
+    $canManage = in_array($user['role'], ['super_admin', 'admin', 'owner']) || ($productOwner && (int)$productOwner['created_by'] === (int)$user['id']);
     if (!$canManage) {
         jsonError('You are not allowed to edit this product', 403);
     }
@@ -73,20 +73,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-    $user = requireRole(['super_admin', 'admin', 'owner', 'manager', 'store_keeper', 'cashier', 'accountant', 'auditor']);
-    $stmt = $pdo->prepare("SELECT created_by FROM products WHERE id = ?");
+    requireCsrf();
+    $user = requireRole(['super_admin', 'admin', 'owner']);
+
+
+    $stmt = $pdo->prepare("SELECT id, name, status FROM products WHERE id = ?");
     $stmt->execute([$id]);
-    $productOwner = $stmt->fetch();
-    $canManage = in_array($user['role'], ['super_admin', 'owner']) || ($productOwner && (int)$productOwner['created_by'] === (int)$user['id']);
-    if (!$canManage) {
-        jsonError('You are not allowed to delete this product', 403);
+    $product = $stmt->fetch();
+    if (!$product) jsonError('Product not found', 404);
+
+    try {
+        $pdo->beginTransaction();
+
+        $batchStmt = $pdo->prepare(
+            "SELECT id, quantity_remaining FROM product_batches
+             WHERE product_id = ? AND status = 'active' AND quantity_remaining > 0"
+        );
+        $batchStmt->execute([$id]);
+        $activeBatches = $batchStmt->fetchAll();
+
+        $pdo->prepare("UPDATE products SET status = 'inactive' WHERE id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM product_authorized_sellers WHERE product_id = ?")->execute([$id]);
+
+        $logStmt = $pdo->prepare(
+            "INSERT INTO inventory_logs (product_id, batch_id, change_type, quantity_change, quantity_after, note, created_by)
+             VALUES (?, ?, 'adjustment', ?, 0, ?, ?)"
+        );
+        foreach ($activeBatches as $batch) {
+            $qty = (float)$batch['quantity_remaining'];
+            if ($qty > 0) {
+                $logStmt->execute([$id, $batch['id'], -$qty, 'Product deleted - remaining stock hidden', $user['id']]);
+            }
+        }
+
+        $pdo->prepare(
+            "UPDATE product_batches
+             SET quantity_remaining = 0, status = 'depleted'
+             WHERE product_id = ? AND status = 'active'"
+        )->execute([$id]);
+
+        $pdo->commit();
+        logAudit($user['id'], 'PRODUCT_DELETED', 'inventory', "Deleted product #$id ({$product['name']}) - hidden and stock cleared");
+        jsonSuccess(['message' => 'Product deleted and hidden from stock/POS']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Product delete error: ' . $e->getMessage());
+        jsonError('Failed to delete product', 500);
     }
 
-    $stmt = $pdo->prepare("UPDATE products SET status = 'inactive' WHERE id = ?");
-    $stmt->execute([$id]);
-
-    logAudit($user['id'], 'PRODUCT_DELETED', 'inventory', "Deactivated product #$id");
-    jsonSuccess(['message' => 'Product deactivated']);
 }
+
 
 jsonError('Method not allowed', 405);

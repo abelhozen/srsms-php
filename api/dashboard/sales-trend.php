@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../config/bootstrap.php';
 $user = requireAuth();
 $pdo = getDB();
 
-$days = (int)($_GET['days'] ?? 30);
+$days = max(1, min(365, (int)($_GET['days'] ?? 30)));
 
 $stmt = $pdo->prepare(
     "SELECT DATE(created_at) AS date,
@@ -21,7 +21,7 @@ $stmt = $pdo->prepare(
 $stmt->execute([$days]);
 $trend = $stmt->fetchAll();
 
-$isFinancial = in_array($user['role'], ['super_admin', 'owner', 'manager', 'accountant', 'auditor'], true);
+$isFinancial = in_array($user['role'], ['super_admin', 'admin', 'owner', 'manager', 'accountant', 'auditor'], true);
 if (!$isFinancial) {
     $trend = array_map(function ($row) {
         unset($row['profit']);

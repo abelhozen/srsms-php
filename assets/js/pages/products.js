@@ -7,7 +7,7 @@
 // calendar input, per request - easier to scan and less error-prone for
 // staff entering expiry dates quickly during stock-in.
 
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_NAMES = ['Januari','Februari','Machi','Aprili','Mei','Juni','Julai','Agosti','Septemba','Oktoba','Novemba','Desemba'];
 
 function buildDayMonthYearPicker(idPrefix, opts = {}) {
     const minYear = opts.minYear || new Date().getFullYear();
@@ -18,15 +18,15 @@ function buildDayMonthYearPicker(idPrefix, opts = {}) {
     return `
         <div style="display:grid; grid-template-columns: 90px 1.4fr 100px; gap:8px;">
             <select id="${idPrefix}Day">
-                <option value="">Day</option>
+                <option value="">Siku</option>
                 ${days.map(d => `<option value="${String(d).padStart(2,'0')}">${d}</option>`).join('')}
             </select>
             <select id="${idPrefix}Month">
-                <option value="">Month</option>
+                <option value="">Mwezi</option>
                 ${MONTH_NAMES.map((m, i) => `<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('')}
             </select>
             <select id="${idPrefix}Year">
-                <option value="">Year</option>
+                <option value="">Mwaka</option>
                 ${years.map(y => `<option value="${y}">${y}</option>`).join('')}
             </select>
         </div>
@@ -57,7 +57,15 @@ function setDayMonthYearPicker(idPrefix, isoDate) {
 function ensureProductManagementAccess(productOwnerId = null) {
     const canManage = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']) || Number(productOwnerId) === Number(Store.user.id);
     if (!canManage) {
-        showError('Only Admin, Owner, or the product creator can edit or delete this product.');
+        showError('Msimamizi, Mmiliki, au muundaji wa bidhaa tu ndio wanaweza kuhariri au kufuta bidhaa hii.');
+        return false;
+    }
+    return true;
+}
+
+function ensureProductDeleteAccess() {
+    if (!hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner'])) {
+        showError('Msimamizi au Mmiliki tu ndio wanaweza kufuta bidhaa.');
         return false;
     }
     return true;
@@ -69,11 +77,11 @@ async function renderProductsPage(container) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
             <div class="search-input">
                 <span>🔍</span>
-                <input type="text" id="productSearchInput" placeholder="Search products..." />
+                <input type="text" id="productSearchInput" placeholder="Tafuta bidhaa..." />
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-outline" onclick="openManageCategoriesModal()">🏷 Manage Categories</button>
-                ${canManageProducts ? '<button class="btn btn-dark" onclick="openCreateProductModal()">+ Add Product</button>' : ''}
+                <button class="btn btn-outline" onclick="openManageCategoriesModal()">🏷 Dhibiti Kategoria</button>
+                ${canManageProducts ? '<button class="btn btn-dark" onclick="openCreateProductModal()">+ Ongeza Bidhaa</button>' : ''}
             </div>
         </div>
         <div class="card">
@@ -96,16 +104,17 @@ async function loadProductsTable() {
     const holder = document.getElementById('productsTableHolder');
     const search = document.getElementById('productSearchInput')?.value || '';
     const canManageProducts = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']);
+    const canDeleteProducts = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']);
     try {
         const res = await Api.listProducts(search ? `?search=${encodeURIComponent(search)}` : '');
         const products = res.products;
         if (products.length === 0) {
-            holder.innerHTML = `<div class="empty-state"><div class="icon">📦</div><p>No products found. Add your first product to get started.</p></div>`;
+            holder.innerHTML = `<div class="empty-state"><div class="icon">📦</div><p>Hakuna bidhaa zilizopatikana. Ongeza bidhaa yako ya kwanza kuanza.</p></div>`;
             return;
         }
         holder.innerHTML = `
             <table>
-                <thead><tr><th>Code</th><th>Product</th><th>Category</th><th>Stock</th><th>Nearest Expiry</th><th>Status</th><th></th></tr></thead>
+                <thead><tr><th>Msimbo</th><th>Bidhaa</th><th>Kategoria</th><th>Hisa</th><th>Kuisha Muda Karibu</th><th>Hali</th><th></th></tr></thead>
                 <tbody>
                     ${products.map(p => {
                         const noStock = parseFloat(p.total_stock) <= 0;
@@ -116,7 +125,7 @@ async function loadProductsTable() {
                             <td>${escapeHtml(p.category_name || '-')}</td>
                             <td>
                                 ${noStock
-                                    ? `<span class="badge badge-amber">⚠ No stock — cannot sell yet</span>`
+                                    ? `<span class="badge badge-amber">⚠ Hakuna hisa — haiwezi kuuzwa bado</span>`
                                     : `${p.total_stock} ${escapeHtml(p.unit)}`}
                             </td>
                             <td>${p.nearest_expiry ? formatDate(p.nearest_expiry) : '-'}</td>
@@ -124,12 +133,14 @@ async function loadProductsTable() {
                             <td style="white-space:nowrap;">
                                 <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
                                     ${canManageProducts || Number(p.created_by) === Number(Store.user.id) ? `
-                                        <button class="btn btn-outline btn-sm" onclick="openEditProductModal(${p.id}, '${escapeHtml(p.product_code).replace(/'/g, "\\'")}', '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.category_id || 'null'}, '${escapeHtml(p.unit || 'pcs').replace(/'/g, "\\'")}', ${p.reorder_level || 10}, '${p.status || 'active'}', ${p.created_by || 'null'})">Edit</button>
-                                        <button class="btn btn-danger btn-sm" onclick="handleDeleteProduct(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.created_by || 'null'})">Delete</button>
+                                        <button class="btn btn-outline btn-sm" onclick="openEditProductModal(${p.id}, '${escapeHtml(p.product_code).replace(/'/g, "\\'")}', '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.category_id || 'null'}, '${escapeHtml(p.unit || 'pcs').replace(/'/g, "\\'")}', ${p.reorder_level || 10}, '${p.status || 'active'}', ${p.created_by || 'null'})">Hariri</button>
+                                    ` : ''}
+                                    ${canDeleteProducts ? `
+                                        <button class="btn btn-danger btn-sm" onclick="handleDeleteProduct(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.created_by || 'null'})">Futa</button>
                                     ` : ''}
                                     ${noStock
-                                        ? `<button class="btn btn-green btn-sm" onclick="openProductDetail(${p.id})">+ Add Stock Now</button>`
-                                        : `<button class="btn btn-outline btn-sm" onclick="openProductDetail(${p.id})">View / Add Batch</button>`}
+                                        ? `<button class="btn btn-green btn-sm" onclick="openProductDetail(${p.id})">+ Ongeza Hisa Sasa</button>`
+                                        : `<button class="btn btn-outline btn-sm" onclick="openProductDetail(${p.id})">Angalia / Ongeza Batch</button>`}
                                 </div>
                             </td>
                         </tr>
@@ -138,12 +149,12 @@ async function loadProductsTable() {
             </table>
             ${products.some(p => parseFloat(p.total_stock) <= 0) ? `
                 <div style="padding:14px 22px; background:var(--accent-amber-bg); border-top:1px solid var(--surface-2); font-size:12.5px; color:var(--accent-amber);">
-                    ⚠ Products highlighted above have <strong>no stock</strong> and will <strong>not appear in the POS</strong> until you add a batch. Click "+ Add Stock Now" to fix this.
+                    ⚠ Bidhaa zilizoangaziwa hapa juu zina <strong>hisa sifuri</strong> na <strong>hazitaonekana kwenye POS</strong> hadi uongeze batch. Bofya "+ Ongeza Hisa Sasa" kurekebisha hili.
                 </div>
             ` : ''}
         `;
     } catch (err) {
-        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load products.</p></div>`;
+        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia bidhaa.</p></div>`;
     }
 }
 
@@ -154,11 +165,11 @@ async function openCreateProductModal() {
 
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Add New Product</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Ongeza Bidhaa Mpya</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group"><label>Product Code</label><input type="text" id="npCode" placeholder="e.g. PRD-001" /></div>
-                    <div class="form-group"><label>Product Name</label><input type="text" id="npName" placeholder="e.g. Cooking Oil 1L" /></div>
+                    <div class="form-group"><label>Msimbo wa Bidhaa</label><input type="text" id="npCode" placeholder="mf. PRD-001" /></div>
+                    <div class="form-group"><label>Jina la Bidhaa</label><input type="text" id="npName" placeholder="mf. Mafuta ya Kupikia 1L" /></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -168,13 +179,13 @@ async function openCreateProductModal() {
                             ${categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="form-group"><label>Unit</label><input type="text" id="npUnit" value="pcs" placeholder="pcs, kg, litre..." /></div>
+                    <div class="form-group"><label>Kiasi/Kifurushi</label><input type="text" id="npUnit" value="pcs" placeholder="pcs, kg, litre..." /></div>
                 </div>
-                <div class="form-group"><label>Reorder Level (low stock alert threshold)</label><input type="number" id="npReorder" value="10" min="0" /></div>
+                <div class="form-group"><label>Kiwango cha Upya Kuweka Hisa (kikomo cha onyo)</label><input type="number" id="npReorder" value="10" min="0" /></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitCreateProduct()">Save Product</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitCreateProduct()">Hifadhi Bidhaa</button>
             </div>
         </div>
     `);
@@ -188,11 +199,11 @@ async function submitCreateProduct() {
     const unit = document.getElementById('npUnit').value.trim() || 'pcs';
     const reorderLevel = parseInt(document.getElementById('npReorder').value) || 10;
 
-    if (!productCode || !name) { showError('Product code and name are required'); return; }
+    if (!productCode || !name) { showError('Msimbo wa bidhaa na jina vinahitajika'); return; }
 
     try {
         await Api.createProduct({ productCode, name, categoryId, unit, reorderLevel });
-        showToast('Product created successfully');
+        showToast('Bidhaa imeundwa kwa mafanikio');
         closeModal();
         loadProductsTable();
     } catch (err) {
@@ -207,11 +218,11 @@ async function openEditProductModal(productId, productCode, name, categoryId, un
 
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Edit Product</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Hariri Bidhaa</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group"><label>Product Code</label><input type="text" id="epCode" value="${escapeHtml(productCode)}" /></div>
-                    <div class="form-group"><label>Product Name</label><input type="text" id="epName" value="${escapeHtml(name)}" /></div>
+                    <div class="form-group"><label>Msimbo wa Bidhaa</label><input type="text" id="epCode" value="${escapeHtml(productCode)}" /></div>
+                    <div class="form-group"><label>Jina la Bidhaa</label><input type="text" id="epName" value="${escapeHtml(name)}" /></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -221,21 +232,21 @@ async function openEditProductModal(productId, productCode, name, categoryId, un
                             ${categories.map(c => `<option value="${c.id}" ${Number(c.id) === Number(categoryId) ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="form-group"><label>Unit</label><input type="text" id="epUnit" value="${escapeHtml(unit)}" /></div>
+                    <div class="form-group"><label>Kiasi/Kifurushi</label><input type="text" id="epUnit" value="${escapeHtml(unit)}" /></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Reorder Level</label><input type="number" id="epReorder" value="${reorderLevel || 10}" min="0" /></div>
-                    <div class="form-group"><label>Status</label>
+                    <div class="form-group"><label>Kiwango cha Upya Kuweka Hisa</label><input type="number" id="epReorder" value="${reorderLevel || 10}" min="0" /></div>
+                    <div class="form-group"><label>Hali</label>
                         <select id="epStatus">
-                            <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
-                            <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                            <option value="active" ${status === 'active' ? 'selected' : ''}>Inatumika</option>
+                            <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Haijatumiwa</option>
                         </select>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitEditProduct(${productId})">Save Changes</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitEditProduct(${productId})">Hifadhi Mabadiliko</button>
             </div>
         </div>
     `);
@@ -252,7 +263,7 @@ async function submitEditProduct(productId) {
             reorderLevel: parseInt(document.getElementById('epReorder').value) || 10,
             status: document.getElementById('epStatus').value
         });
-        showToast('Product updated successfully');
+        showToast('Bidhaa imeboreshwa kwa mafanikio');
         closeModal();
         loadProductsTable();
     } catch (err) {
@@ -261,11 +272,11 @@ async function submitEditProduct(productId) {
 }
 
 async function handleDeleteProduct(productId, productName, productOwnerId = null) {
-    if (!ensureProductManagementAccess(productOwnerId)) return;
-    if (!confirm(`Deactivate "${productName}"? It will no longer appear in active listings and POS.`)) return;
+    if (!ensureProductDeleteAccess()) return;
+    if (!confirm(`Futa "${productName}" kwenye hisa? Itatoweka kwenye Bidhaa na POS, na hisa iliyobaki itafutwa. Risiti za zamani zitasalia hadi historia ya mauzo ifutwe.`)) return;
     try {
         await Api.deleteProduct(productId);
-        showToast('Product deactivated successfully');
+        showToast('Bidhaa imezimwa kwa mafanikio');
         closeModal();
         loadProductsTable();
     } catch (err) {
@@ -282,6 +293,7 @@ async function openProductDetail(productId) {
         const authorizedSellers = res.authorizedSellers || [];
         const isRestricted = Number(p.restrict_sellers) === 1;
         const canManageProducts = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']) || Number(p.created_by) === Number(Store.user.id);
+        const canDeleteProducts = hasAnyRole(Store.user?.role, ['super_admin', 'admin', 'owner']);
 
         openModal(`
             <div class="modal" style="max-width:720px;">
@@ -289,51 +301,53 @@ async function openProductDetail(productId) {
                     <h3>${escapeHtml(p.name)}</h3>
                     <div style="display:flex; gap:8px; align-items:center;">
                         ${canManageProducts ? `
-                            <button class="btn btn-outline btn-sm" onclick="openEditProductModal(${productId}, '${escapeHtml(p.product_code).replace(/'/g, "\\'")}', '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.category_id || 'null'}, '${escapeHtml(p.unit || 'pcs').replace(/'/g, "\\'")}', ${p.reorder_level || 10}, '${p.status || 'active'}', ${p.created_by || 'null'})">Edit</button>
-                            <button class="btn btn-danger btn-sm" onclick="handleDeleteProduct(${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.created_by || 'null'})">Delete</button>
+                            <button class="btn btn-outline btn-sm" onclick="openEditProductModal(${productId}, '${escapeHtml(p.product_code).replace(/'/g, "\\'")}', '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.category_id || 'null'}, '${escapeHtml(p.unit || 'pcs').replace(/'/g, "\\'")}', ${p.reorder_level || 10}, '${p.status || 'active'}', ${p.created_by || 'null'})">Hariri</button>
+                        ` : ''}
+                        ${canDeleteProducts ? `
+                            <button class="btn btn-danger btn-sm" onclick="handleDeleteProduct(${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', ${p.created_by || 'null'})">Futa</button>
                         ` : ''}
                         <button class="modal-close" onclick="closeModal()">✕</button>
                     </div>
                 </div>
                 <div class="modal-body">
                     <div style="display:flex; gap:20px; margin-bottom:18px; font-size:13px; color:var(--text-secondary);">
-                        <span><strong>Code:</strong> ${escapeHtml(p.product_code)}</span>
-                        <span><strong>Unit:</strong> ${escapeHtml(p.unit)}</span>
-                        <span><strong>Category:</strong> ${escapeHtml(p.category_name || '-')}</span>
+                        <span><strong>Msimbo:</strong> ${escapeHtml(p.product_code)}</span>
+                        <span><strong>Kiasi/Kifurushi:</strong> ${escapeHtml(p.unit)}</span>
+                        <span><strong>Kategoria:</strong> ${escapeHtml(p.category_name || '-')}</span>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:12px 14px; background:${isRestricted ? 'var(--accent-amber-bg)' : 'var(--surface-1)'}; border-radius:var(--radius-sm);">
                         <div>
                             <div style="font-size:12.5px; font-weight:600; color:${isRestricted ? 'var(--accent-amber)' : 'var(--text-secondary)'};">
-                                ${isRestricted ? `🔒 Restricted — only ${authorizedSellers.length} authorized seller(s)` : '🔓 Any cashier can sell this product'}
+                                ${isRestricted ? `🔒 Imepunguzwa — ${authorizedSellers.length} muuzaji/wauzaji walioidhinishwa tu` : '🔓 Mkasishaji yeyote anaweza kuuza bidhaa hii'}
                             </div>
                             ${isRestricted && authorizedSellers.length > 0 ? `
                                 <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
                                     ${authorizedSellers.map(s => escapeHtml(s.full_name)).join(', ')}
                                 </div>` : ''}
                         </div>
-                        <button class="btn btn-outline btn-sm" onclick="openManageSellersModal(${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">Manage Sellers</button>
+                        <button class="btn btn-outline btn-sm" onclick="openManageSellersModal(${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">Dhibiti Wauzaji</button>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <h4 style="font-family:var(--font-display); font-size:14px;">Batches</h4>
-                        <button class="btn btn-green btn-sm" onclick="openAddBatchModal(${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">+ Add Batch</button>
+                        <h4 style="font-family:var(--font-display); font-size:14px;">Batch</h4>
+                        <button class="btn btn-green btn-sm" onclick="openAddBatchModal(${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">+ Ongeza Batch</button>
                     </div>
                     <div style="max-height:320px; overflow-y:auto;">
                         <table>
-                            <thead><tr><th>Batch #</th><th>Qty Left</th><th>Buy Price</th><th>Sell Price</th><th>Expiry</th><th>Status</th><th></th></tr></thead>
+                            <thead><tr><th>Batch #</th><th>Kiasi Kilichobaki</th><th>Bei ya Kununua</th><th>Bei ya Kuuza</th><th>Muda wa Kuisha</th><th>Hali</th><th></th></tr></thead>
                             <tbody>
-                                ${batches.length === 0 ? `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">No batches yet. Add stock to begin selling this product.</td></tr>` :
+                                ${batches.length === 0 ? `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">Hakuna batch bado. Ongeza hisa kuanza kuuza bidhaa hii.</td></tr>` :
                                     batches.map(b => `
                                         <tr>
                                             <td>${escapeHtml(b.batch_number)}</td>
                                             <td>${b.quantity_remaining}</td>
                                             <td>${formatMoney(b.buying_price)}</td>
                                             <td>${formatMoney(b.selling_price)}</td>
-                                            <td>${b.expiry_date ? formatDate(b.expiry_date) : '<span style="color:var(--text-muted);">No expiry</span>'}</td>
+                                            <td>${b.expiry_date ? formatDate(b.expiry_date) : '<span style="color:var(--text-muted);">Hakuna mwisho wa muda</span>'}</td>
                                             <td>${statusBadge(b.status)}</td>
                                             <td>
-                                                ${b.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="markBatchDamaged(${b.id}, ${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">Mark Damaged</button>` : ''}
+                                                ${b.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="markBatchDamaged(${b.id}, ${productId}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">Weka Imeharibika</button>` : ''}
                                             </td>
                                         </tr>
                                     `).join('')}
@@ -341,7 +355,7 @@ async function openProductDetail(productId) {
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
+                <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Funga</button></div>
             </div>
         `);
     } catch (err) {
@@ -356,35 +370,35 @@ function openAddBatchModal(productId, productName) {
             <div class="modal-header"><h3>Add Batch — ${escapeHtml(productName)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group"><label>Batch Number</label><input type="text" id="nbNumber" placeholder="e.g. BATCH-2026-06" /></div>
-                    <div class="form-group"><label>Quantity Received</label><input type="number" id="nbQty" min="1" /></div>
+                    <div class="form-group"><label>Namba ya Batch</label><input type="text" id="nbNumber" placeholder="mf. BATCH-2026-06" /></div>
+                    <div class="form-group"><label>Kiasi Kilichopokelewa</label><input type="number" id="nbQty" min="1" /></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Buying Price (per unit)</label><input type="number" id="nbBuy" min="0" step="0.01" /></div>
-                    <div class="form-group"><label>Selling Price (per unit)</label><input type="number" id="nbSell" min="0" step="0.01" /></div>
+                    <div class="form-group"><label>Bei ya Kununua (kwa kila kitengo)</label><input type="number" id="nbBuy" min="0" step="0.01" /></div>
+                    <div class="form-group"><label>Bei ya Kuuza (kwa kila kitengo)</label><input type="number" id="nbSell" min="0" step="0.01" /></div>
                 </div>
 
                 <div class="form-group">
-                    <label>Received Date</label>
+                    <label>Tarehe ya Kupokelewa</label>
                     ${buildDayMonthYearPicker('nbReceived', { minYear: new Date().getFullYear() - 1, maxYear: new Date().getFullYear() })}
                 </div>
 
                 <div style="margin-top:6px; padding-top:14px; border-top:1px solid var(--surface-2);">
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--text-primary); text-transform:none; letter-spacing:0; cursor:pointer; margin-bottom:0;">
                         <input type="checkbox" id="nbNoExpiry" style="width:16px; height:16px;" onchange="toggleExpiryField()" />
-                        This product does not expire (e.g. utensils, clothing, electronics)
+                        Bidhaa hii haina muda wa kuisha (mf. vyombo, nguo, vifaa vya elektroniki)
                     </label>
                 </div>
 
                 <div class="form-group" id="nbExpiryWrapper" style="margin-top:14px;">
-                    <label>Expiry Date <span style="color:var(--accent-red);">*</span></label>
+                    <label>Tarehe ya Kuisha Muda <span style="color:var(--accent-red);">*</span></label>
                     ${buildDayMonthYearPicker('nbExpiry', { minYear: new Date().getFullYear(), maxYear: new Date().getFullYear() + 10 })}
-                    <p style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">Required for every batch unless marked "does not expire" above.</p>
+                    <p style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">Inahitajika kwa kila batch isipokuwa ikitimba "haina muda wa kuisha" hapo juu.</p>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="openProductDetail(${productId})">Back</button>
-                <button class="btn btn-dark" id="nbSubmitBtn" onclick="submitAddBatch(${productId})">Add Batch</button>
+                <button class="btn btn-outline" onclick="openProductDetail(${productId})">Rudi</button>
+                <button class="btn btn-dark" id="nbSubmitBtn" onclick="submitAddBatch(${productId})">Ongeza Batch</button>
             </div>
         </div>
     `);
@@ -414,15 +428,15 @@ async function submitAddBatch(productId, confirmLowPrice = false) {
     const expiryDate = hasExpiry ? readDayMonthYearPicker('nbExpiry') : null;
 
     if (!batchNumber || !quantity || isNaN(buyingPrice) || isNaN(sellingPrice)) {
-        showError('Please fill batch number, quantity, buying and selling price');
+        showError('Tafadhali jaza namba ya batch, kiasi, bei ya kununua na bei ya kuuza');
         return;
     }
     if (!receivedDate) {
-        showError('Please select the received date (day, month, and year)');
+        showError('Tafadhali chagua tarehe ya kupokelewa (siku, mwezi, na mwaka)');
         return;
     }
     if (hasExpiry && !expiryDate) {
-        showError('Please select the full expiry date (day, month, and year), or tick "This product does not expire"');
+        showError('Tafadhali chagua tarehe kamili ya kuisha muda (siku, mwezi, na mwaka), au weka tiki "Bidhaa hii haina muda wa kuisha"');
         return;
     }
 
@@ -434,12 +448,12 @@ async function submitAddBatch(productId, confirmLowPrice = false) {
             batchNumber, quantity, buyingPrice, sellingPrice, receivedDate,
             hasExpiry, expiryDate, confirmLowPrice
         });
-        showToast('Batch added successfully');
+        showToast('Batch imeongezwa kwa mafanikio');
         openProductDetail(productId);
         loadProductsTable();
     } catch (err) {
         if (err?.data?.warning === 'price_below_cost') {
-            const proceed = confirm(`${err.message}\n\nDo you want to save this batch anyway at a loss-making price?`);
+            const proceed = confirm(`${err.message}\n\nUnataka kuhifadhi batch hii hata hivyo kwa bei ya hasara?`);
             if (proceed) {
                 btn.disabled = false;
                 return submitAddBatch(productId, true);
@@ -470,17 +484,17 @@ async function openManageSellersModal(productId, productName) {
 
         openModal(`
             <div class="modal">
-                <div class="modal-header"><h3>Who Can Sell — ${escapeHtml(productName)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+                <div class="modal-header"><h3>Nani Anaweza Kuuza — ${escapeHtml(productName)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
                 <div class="modal-body">
                     <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:var(--text-primary); text-transform:none; letter-spacing:0; cursor:pointer; margin-bottom:16px;">
                         <input type="checkbox" id="msRestrict" style="width:16px; height:16px;" ${isRestricted ? 'checked' : ''} onchange="toggleSellerList()" />
-                        Restrict who can sell this product
+                        Zuia nani anaweza kuuza bidhaa hii
                     </label>
                     <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">By default, any cashier can sell any product. Turn this on for items that need special authorization (e.g. high-value goods, age-restricted items).</p>
 
                     <div id="msSellerList" style="${isRestricted ? '' : 'display:none;'} border-top:1px solid var(--surface-2); padding-top:14px;">
-                        <label style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:10px; display:block;">Authorized Cashiers</label>
-                        ${sellers.length === 0 ? `<p style="font-size:12.5px; color:var(--text-muted);">No active cashiers found. Add a cashier account first under Users.</p>` :
+                        <label style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:10px; display:block;">Wauzaji Waliodhibitiwa</label>
+                        ${sellers.length === 0 ? `<p style="font-size:12.5px; color:var(--text-muted);">Hakuna makasishaji wanaofanya kazi. Ongeza akaunti ya mkasishaji kwanza chini ya Watumiaji.</p>` :
                             sellers.map(s => `
                                 <label style="display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13.5px; font-weight:400; text-transform:none; letter-spacing:0; cursor:pointer;">
                                     <input type="checkbox" class="ms-seller-checkbox" value="${s.id}" ${authorizedIds.has(s.id) ? 'checked' : ''} style="width:16px; height:16px;" />
@@ -490,8 +504,8 @@ async function openManageSellersModal(productId, productName) {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-outline" onclick="openProductDetail(${productId})">Back</button>
-                    <button class="btn btn-dark" onclick="submitManageSellers(${productId})">Save</button>
+                    <button class="btn btn-outline" onclick="openProductDetail(${productId})">Rudi</button>
+                    <button class="btn btn-dark" onclick="submitManageSellers(${productId})">Hifadhi</button>
                 </div>
             </div>
         `);
@@ -511,13 +525,13 @@ async function submitManageSellers(productId) {
     const sellerIds = Array.from(document.querySelectorAll('.ms-seller-checkbox:checked')).map(el => parseInt(el.value));
 
     if (restrictSellers && sellerIds.length === 0) {
-        showError('Select at least one cashier, or turn off the restriction');
+        showError('Chagua angalau mkasishaji mmoja, au uzime kizuizi');
         return;
     }
 
     try {
         await Api.updateProductSellers(productId, { restrictSellers, sellerIds });
-        showToast('Authorized sellers updated');
+        showToast('Wauzaji waliodhibitiwa wamesasishwa');
         openProductDetail(productId);
     } catch (err) {
         showError(err);
@@ -525,10 +539,10 @@ async function submitManageSellers(productId) {
 }
 
 async function markBatchDamaged(batchId, productId, productName) {
-    if (!confirm(`Mark this batch of "${productName}" as damaged? This will remove its remaining stock and record a loss.`)) return;
+    if (!confirm(`Weka batch hii ya "${productName}" kama imeharibika? Hii itafuta hisa iliyobaki na kurekodi hasara.`)) return;
     try {
         await Api.updateBatchStatus(batchId, 'damaged', 'Marked damaged via inventory screen');
-        showToast('Batch marked as damaged');
+        showToast('Batch imewekwa kama imeharibika');
         openProductDetail(productId);
         loadProductsTable();
     } catch (err) {
@@ -555,13 +569,13 @@ async function renderManageCategoriesModal() {
 
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Product Categories</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Kategoria za Bidhaa</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
                 <div style="max-height:280px; overflow-y:auto; margin-bottom:18px;">
                     <table>
                         <thead><tr><th>Name</th><th>Description</th></tr></thead>
                         <tbody>
-                            ${categories.length === 0 ? `<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">No categories yet. Add one below.</td></tr>` :
+                            ${categories.length === 0 ? `<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:20px;">Hakuna kategoria bado. Ongeza moja hapa chini.</td></tr>` :
                                 categories.map(c => `
                                     <tr>
                                         <td><strong>${escapeHtml(c.name)}</strong></td>
@@ -572,14 +586,14 @@ async function renderManageCategoriesModal() {
                     </table>
                 </div>
                 <div style="border-top:1px solid var(--surface-2); padding-top:16px;">
-                    <h4 style="font-family:var(--font-display); font-size:14px; margin-bottom:12px;">Add New Category</h4>
-                    <div class="form-group"><label>Category Name</label><input type="text" id="ncatName" placeholder="e.g. Beverages" /></div>
-                    <div class="form-group"><label>Description (optional)</label><input type="text" id="ncatDescription" placeholder="e.g. Soft drinks, juices, water" /></div>
+                    <h4 style="font-family:var(--font-display); font-size:14px; margin-bottom:12px;">Ongeza Kategoria Mpya</h4>
+                    <div class="form-group"><label>Jina la Kategoria</label><input type="text" id="ncatName" placeholder="mf. Vinywaji" /></div>
+                    <div class="form-group"><label>Maelezo (si lazima)</label><input type="text" id="ncatDescription" placeholder="mf. Vinywaji baridi, juisi, maji" /></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Close</button>
-                <button class="btn btn-dark" onclick="submitCreateCategory()">Add Category</button>
+                <button class="btn btn-outline" onclick="closeModal()">Funga</button>
+                <button class="btn btn-dark" onclick="submitCreateCategory()">Ongeza Kategoria</button>
             </div>
         </div>
     `);
@@ -588,11 +602,11 @@ async function renderManageCategoriesModal() {
 async function submitCreateCategory() {
     const name = document.getElementById('ncatName').value.trim();
     const description = document.getElementById('ncatDescription').value.trim();
-    if (!name) { showError('Category name is required'); return; }
+    if (!name) { showError('Jina la kategoria linahitajika'); return; }
 
     try {
         await Api.createCategory({ name, description });
-        showToast('Category added successfully');
+        showToast('Kategoria imeongezwa kwa mafanikio');
         await renderManageCategoriesModal();
     } catch (err) {
         showError(err);

@@ -9,12 +9,12 @@ async function renderExpensesPage(container) {
     container.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
             <div class="tabs" id="expenseTabs">
-                <button class="tab-btn active" data-status="" onclick="filterExpenses('')">All</button>
-                <button class="tab-btn" data-status="pending" onclick="filterExpenses('pending')">Pending</button>
-                <button class="tab-btn" data-status="approved" onclick="filterExpenses('approved')">Approved</button>
-                <button class="tab-btn" data-status="rejected" onclick="filterExpenses('rejected')">Rejected</button>
+                <button class="tab-btn active" data-status="" onclick="filterExpenses('')">Zote</button>
+                <button class="tab-btn" data-status="pending" onclick="filterExpenses('pending')">Zinasubiri</button>
+                <button class="tab-btn" data-status="approved" onclick="filterExpenses('approved')">Zimekubaliwa</button>
+                <button class="tab-btn" data-status="rejected" onclick="filterExpenses('rejected')">Zimekataliwa</button>
             </div>
-            ${canCreate ? `<button class="btn btn-dark" onclick="openCreateExpenseModal()">+ Record Expense</button>` : ''}
+            ${canCreate ? `<button class="btn btn-dark" onclick="openCreateExpenseModal()">+ Rekodi ya Matumizi</button>` : ''}
         </div>
         <div class="card">
             <div class="card-body" style="padding:0;" id="expensesTableHolder">
@@ -47,7 +47,7 @@ async function loadExpensesTable() {
         }
         holder.innerHTML = `
             <table>
-                <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Recorded By</th><th>Status</th>${canApprove ? '<th></th>' : ''}</tr></thead>
+                <thead><tr><th>Tarehe</th><th>Maelezo</th><th>Kategoria</th><th>Kiasi</th><th>Imeandikwa Na</th><th>Hali</th>${canApprove ? '<th></th>' : ''}</tr></thead>
                 <tbody>
                     ${expenses.map(e => `
                         <tr>
@@ -59,8 +59,8 @@ async function loadExpensesTable() {
                             <td>${statusBadge(e.status)}</td>
                             ${canApprove ? `<td>
                                 ${e.status === 'pending' ? `
-                                    <button class="btn btn-green btn-sm" onclick="decideExpense(${e.id}, 'approved')">Approve</button>
-                                    <button class="btn btn-danger btn-sm" onclick="decideExpense(${e.id}, 'rejected')">Reject</button>
+                                    <button class="btn btn-green btn-sm" onclick="decideExpense(${e.id}, 'approved')">Kubali</button>
+                                    <button class="btn btn-danger btn-sm" onclick="decideExpense(${e.id}, 'rejected')">Kataa</button>
                                 ` : ''}
                             </td>` : ''}
                         </tr>
@@ -69,7 +69,7 @@ async function loadExpensesTable() {
             </table>
         `;
     } catch (err) {
-        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load expenses.</p></div>`;
+        holder.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia matumizi.</p></div>`;
     }
 }
 
@@ -90,24 +90,24 @@ async function openCreateExpenseModal() {
 
     openModal(`
         <div class="modal">
-            <div class="modal-header"><h3>Record Expense</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+            <div class="modal-header"><h3>Rekodi ya Matumizi</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>Description</label><input type="text" id="neDesc" placeholder="e.g. Electricity bill - June" /></div>
+                <div class="form-group"><label>Maelezo</label><input type="text" id="neDesc" placeholder="mf. Bili ya umeme - Juni" /></div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Category</label>
+                        <label>Kategoria</label>
                         <select id="neCategory">
                             <option value="">-- Uncategorized --</option>
                             ${categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="form-group"><label>Amount</label><input type="number" id="neAmount" min="0" step="0.01" /></div>
+                    <div class="form-group"><label>Kiasi</label><input type="number" id="neAmount" min="0" step="0.01" /></div>
                 </div>
-                <div class="form-group"><label>Expense Date</label><input type="date" id="neDate" value="${todayISO()}" /></div>
+                <div class="form-group"><label>Tarehe ya Matumizi</label><input type="date" id="neDate" value="${todayISO()}" /></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-dark" onclick="submitCreateExpense()">Submit for Approval</button>
+                <button class="btn btn-outline" onclick="closeModal()">Ghairi</button>
+                <button class="btn btn-dark" onclick="submitCreateExpense()">Wasilisha kwa Uidhinishaji</button>
             </div>
         </div>
     `);
@@ -119,11 +119,11 @@ async function submitCreateExpense() {
     const amount = parseFloat(document.getElementById('neAmount').value);
     const expenseDate = document.getElementById('neDate').value;
 
-    if (!description || !amount || !expenseDate) { showError('Please fill description, amount and date'); return; }
+    if (!description || !amount || !expenseDate) { showError('Tafadhali jaza maelezo, kiasi na tarehe'); return; }
 
     try {
         await Api.createExpense({ categoryId, description, amount, expenseDate });
-        showToast('Expense recorded, pending approval');
+        showToast('Matumizi yameandikwa, yanasubiri uidhinishaji');
         closeModal();
         loadExpensesTable();
     } catch (err) {

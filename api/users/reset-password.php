@@ -5,10 +5,12 @@
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
 
-$user = requireRole(['super_admin', 'owner']);
+$user = requireRole(['super_admin']);
 $pdo = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') jsonError('Method not allowed', 405);
+requireCsrf();
+
 
 $id = $_GET['id'] ?? null;
 if (!$id) jsonError('Missing user id', 400);

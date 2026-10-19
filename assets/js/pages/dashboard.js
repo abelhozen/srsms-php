@@ -21,44 +21,44 @@ async function renderDashboardPage(container) {
     const health = healthRes?.health || null;
 
     const growthBadge = month.growthPercent != null
-        ? `<span class="kpi-delta ${month.growthPercent >= 0 ? 'up' : 'down'}">${month.growthPercent >= 0 ? '▲' : '▼'} ${Math.abs(month.growthPercent)}% vs last month</span>`
+        ? `<span class="kpi-delta ${month.growthPercent >= 0 ? 'up' : 'down'}">${month.growthPercent >= 0 ? '▲' : '▼'} ${Math.abs(month.growthPercent)}% kuliko mwezi uliopita</span>`
         : '';
 
     container.innerHTML = `
         <section class="dashboard-hero">
             <div>
-                <div class="hero-eyebrow"><i class="fa-solid fa-award"></i> ${escapeHtml(roleLabel(Store.user.role))} Command Center</div>
-                <h2>Gold Retail performance at a glance</h2>
-                <p>Monitor sales, stock, expenses, and alerts in one secure workspace built for a growing shop.</p>
+                <div class="hero-eyebrow"><i class="fa-solid fa-award"></i> ${escapeHtml(roleLabel(Store.user.role))} Kituo cha Uongozi</div>
+                <h2>Utendaji wa duka kwa muonekano mmoja</h2>
+                <p>Fuatilia mauzo, hisa, matumizi, na arifa katika eneo moja salama la kazi kwa duka linalokua.</p>
             </div>
             <div class="hero-actions">
-                <button class="btn btn-dark" onclick="navigateTo('pos')"><i class="fa-solid fa-cash-register"></i> New Sale</button>
-                <button class="btn btn-outline" onclick="navigateTo('products')"><i class="fa-solid fa-boxes-stacked"></i> Manage Stock</button>
+                <button class="btn btn-dark" onclick="navigateTo('pos')"><i class="fa-solid fa-cash-register"></i> Mauzo Mpya</button>
+                <button class="btn btn-outline" onclick="navigateTo('products')"><i class="fa-solid fa-boxes-stacked"></i> Dhibiti Hisa</button>
             </div>
         </section>
 
         <div class="kpi-grid">
             <div class="kpi-card">
-                <div class="kpi-label"><i class="fa-solid fa-receipt"></i> Today's Sales</div>
+                <div class="kpi-label"><i class="fa-solid fa-receipt"></i> Mauzo ya Leo</div>
                 <div class="kpi-value">${formatMoney(today.revenue)}</div>
-                <div class="metric-chip">${today.transactionCount} transaction(s) recorded</div>
+                <div class="metric-chip">${today.transactionCount} muamala ulioandikwa</div>
             </div>
             ${isFinancial ? `
             <div class="kpi-card">
-                <div class="kpi-label"><i class="fa-solid fa-chart-line"></i> Today's Net Profit</div>
+                <div class="kpi-label"><i class="fa-solid fa-chart-line"></i> Faida ya Leo</div>
                 <div class="kpi-value" style="color:${today.netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${formatMoney(today.netProfit)}</div>
-                <div class="metric-chip">After expenses &amp; stock loss</div>
+                <div class="metric-chip">Baada ya matumizi na hasara ya hisa</div>
             </div>` : ''}
             <div class="kpi-card">
-                <div class="kpi-label"><i class="fa-solid fa-money-bill-trend-up"></i> This Month Revenue</div>
+                <div class="kpi-label"><i class="fa-solid fa-money-bill-trend-up"></i> Mapato ya Mwezi huu</div>
                 <div class="kpi-value">${formatMoney(month.revenue)}</div>
                 ${growthBadge}
             </div>
             ${isFinancial ? `
             <div class="kpi-card">
-                <div class="kpi-label"><i class="fa-solid fa-scale-balanced"></i> This Month Net Profit</div>
+                <div class="kpi-label"><i class="fa-solid fa-scale-balanced"></i> Faida ya Mwezi huu</div>
                 <div class="kpi-value" style="color:${month.netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${formatMoney(month.netProfit)}</div>
-                <div class="metric-chip">${month.netProfit >= 0 ? 'Profitable performance this month' : 'Loss alert needs attention'}</div>
+                <div class="metric-chip">${month.netProfit >= 0 ? 'Utendaji wa faida mwezi huu' : 'Onyo la hasara linahitaji uangalizi'}</div>
             </div>` : ''}
         </div>
 
@@ -68,27 +68,27 @@ async function renderDashboardPage(container) {
 
         <div class="dashboard-grid" id="dashboardGrid">
             <div class="card">
-                <div class="card-header"><h3><i class="fa-solid fa-chart-column"></i> Sales Trend (30 Days)</h3></div>
+                <div class="card-header"><h3><i class="fa-solid fa-chart-column"></i> Mwelekeo wa Mauzo (Siku 30)</h3></div>
                 <div class="card-body" id="trendChartHolder">
                     <div class="loading-spinner"></div>
                 </div>
             </div>
             <div class="card">
-                <div class="card-header"><h3><i class="fa-solid fa-bell"></i> Live Alerts</h3></div>
+                <div class="card-header"><h3><i class="fa-solid fa-bell"></i> Arifa za Muda Halisi</h3></div>
                 <div class="card-body" style="display:flex; flex-direction:column; gap:14px;">
                     <div>
-                        <div style="font-size:12px;font-weight:700;color:var(--accent-amber);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">⚠ Low Stock (${lowStockRes.lowStock.length})</div>
-                        ${lowStockRes.lowStock.length === 0 ? '<p style="font-size:12.5px;color:var(--text-muted);">All stock levels healthy.</p>' :
+                        <div style="font-size:12px;font-weight:700;color:var(--accent-amber);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">⚠ Hisa Zisizokidhi Kiwango (${lowStockRes.lowStock.length})</div>
+                        ${lowStockRes.lowStock.length === 0 ? '<p style="font-size:12.5px;color:var(--text-muted);">Hisa ziko katika hali nzuri.</p>' :
                             lowStockRes.lowStock.slice(0, 5).map(p => `
                                 <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--surface-1);">
                                     <span>${escapeHtml(p.name)}</span>
-                                    <span class="badge badge-amber">${p.total_stock} left</span>
+                                    <span class="badge badge-amber">${p.total_stock} zimesalia</span>
                                 </div>
                             `).join('')}
                     </div>
                     <div>
-                        <div style="font-size:12px;font-weight:700;color:var(--accent-red);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">⏰ Expiring Soon (${expiringRes.expiringSoon.length})</div>
-                        ${expiringRes.expiringSoon.length === 0 ? '<p style="font-size:12.5px;color:var(--text-muted);">No batches expiring soon.</p>' :
+                        <div style="font-size:12px;font-weight:700;color:var(--accent-red);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">⏰ Zina Karibia Kuisha Muda (${expiringRes.expiringSoon.length})</div>
+                        ${expiringRes.expiringSoon.length === 0 ? '<p style="font-size:12.5px;color:var(--text-muted);">Hakuna batch zinazokaribia kuisha muda.</p>' :
                             expiringRes.expiringSoon.slice(0, 5).map(b => `
                                 <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--surface-1);">
                                     <span>${escapeHtml(b.product_name)}</span>
@@ -101,7 +101,7 @@ async function renderDashboardPage(container) {
         </div>
 
         <div class="card" style="margin-top:18px;">
-            <div class="card-header"><h3><i class="fa-solid fa-boxes-stacked"></i> Top Selling Products</h3></div>
+            <div class="card-header"><h3><i class="fa-solid fa-boxes-stacked"></i> Bidhaa Zilizouzwa Sana</h3></div>
             <div class="card-body" id="topProductsHolder"><div class="loading-spinner"></div></div>
         </div>
     `;
@@ -137,34 +137,34 @@ function renderProfitLossBreakdown(month) {
     return `
         <div class="card" style="margin-top:18px;">
             <div class="card-header">
-                <h3>Profit &amp; Loss — This Month</h3>
-                <span class="badge ${isProfitable ? 'badge-green' : 'badge-red'}">${isProfitable ? 'Profitable' : 'Running at a Loss'}</span>
+                <h3>Faida na Gharama — Mwezi huu</h3>
+                <span class="badge ${isProfitable ? 'badge-green' : 'badge-red'}">${isProfitable ? 'Ina faida' : 'Ina hasara'}</span>
             </div>
             <div class="card-body">
                 <div style="max-width:560px;">
-                    ${row('Total Revenue (Sales)', revenue, { bold: false })}
-                    ${row('Cost of Goods Sold (COGS)', cogs, { muted: true, negative: true, indent: true })}
-                    ${row('Gross Profit', grossProfit, { bold: true, color: grossProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' })}
-                    ${row('Operating Expenses (approved)', expenses, { muted: true, negative: true, indent: true })}
-                    ${row('Stock Loss (damaged / expired)', stockLoss, { muted: true, negative: true, indent: true })}
+                    ${row('Mapato ya Jumla (Mauzo)', revenue, { bold: false })}
+                    ${row('Gharama ya Bidhaa Zilizouzwa (COGS)', cogs, { muted: true, negative: true, indent: true })}
+                    ${row('Faida ya Kawaida', grossProfit, { bold: true, color: grossProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' })}
+                    ${row('Matumizi ya Uendeshaji (yamekubaliwa)', expenses, { muted: true, negative: true, indent: true })}
+                    ${row('Hasara ya Hisa (imeharibiwa / imemaliza muda)', stockLoss, { muted: true, negative: true, indent: true })}
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0 4px; margin-top:4px; border-top:2px solid var(--primary-900);">
-                        <span style="font-size:15px; font-weight:700;">Net Profit</span>
+                        <span style="font-size:15px; font-weight:700;">Faida Halisi</span>
                         <span style="font-family:var(--font-mono); font-size:20px; font-weight:800; color:${isProfitable ? 'var(--accent-green)' : 'var(--accent-red)'};">${formatMoney(netProfit)}</span>
                     </div>
                 </div>
                 <div style="display:flex; gap:24px; margin-top:18px; padding-top:16px; border-top:1px solid var(--surface-2);">
                     <div>
-                        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Gross Margin</div>
+                        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Kiwango cha Faida ya Kawaida</div>
                         <div style="font-size:18px; font-weight:700; margin-top:4px;">${grossMargin}%</div>
                     </div>
                     <div>
-                        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Net Margin</div>
+                        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Kiwango cha Faida Halisi</div>
                         <div style="font-size:18px; font-weight:700; margin-top:4px; color:${isProfitable ? 'var(--accent-green)' : 'var(--accent-red)'};">${netMargin}%</div>
                     </div>
                 </div>
                 ${!isProfitable ? `
                 <div style="margin-top:16px; padding:12px 14px; background:var(--accent-red-bg); border-radius:var(--radius-sm); font-size:12.5px; color:var(--accent-red);">
-                    ⚠ This month is currently running at a loss. Review expenses and stock loss below to identify the cause.
+                    ⚠ Mwezi huu una hasara. Angalia matumizi na hasara ya hisa ili kubaini chanzo.
                 </div>` : ''}
             </div>
         </div>
@@ -182,42 +182,42 @@ function renderBusinessHealthPanel(health) {
     return `
         <div class="card" style="margin-top:18px;">
             <div class="card-header">
-                <h3>Business Health</h3>
-                <button class="btn btn-outline btn-sm" onclick="window.__salesDefaultTab='register'; navigateTo('sales')">📋 Open Daily Register</button>
+                <h3>Afya ya Biashara</h3>
+                <button class="btn btn-outline btn-sm" onclick="window.__salesDefaultTab='register'; navigateTo('sales')">📋 Fungua Rejesta ya Kila Siku</button>
             </div>
             <div class="card-body">
                 <div class="kpi-grid" style="margin-bottom:0;">
                     <div class="kpi-card" style="box-shadow:none; border-color:var(--surface-2);">
-                        <div class="kpi-label">Stock Value (at cost)</div>
+                        <div class="kpi-label">Thamani ya Hisa (kwa gharama)</div>
                         <div class="kpi-value" style="font-size:20px;">${formatMoney(health.stockValue)}</div>
-                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">Sells for ${formatMoney(health.potentialRevenue)} if all moves</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">Inauzwa kwa ${formatMoney(health.potentialRevenue)} ikiwa yote itahama</div>
                     </div>
                     <div class="kpi-card" style="box-shadow:none; border-color:${hasExpiredStock ? 'var(--accent-red)' : 'var(--surface-2)'};">
-                        <div class="kpi-label">Already Expired (unsold)</div>
+                        <div class="kpi-label">Imekwisha Muda (isiyouzwa)</div>
                         <div class="kpi-value" style="font-size:20px; color:${hasExpiredStock ? 'var(--accent-red)' : 'var(--text-primary)'};">${formatMoney(health.alreadyExpired.value)}</div>
-                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">${health.alreadyExpired.batchCount} batch(es) need write-off</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">${health.alreadyExpired.batchCount} batch(z) zinahitaji kufutwa</div>
                     </div>
                     <div class="kpi-card" style="box-shadow:none; border-color:${hasExpiringSoon ? 'var(--accent-amber)' : 'var(--surface-2)'};">
-                        <div class="kpi-label">Value at Risk (expiring soon)</div>
+                        <div class="kpi-label">Thamani Hatari (inakaribia kuisha muda)</div>
                         <div class="kpi-value" style="font-size:20px; color:${hasExpiringSoon ? 'var(--accent-amber)' : 'var(--text-primary)'};">${formatMoney(health.expiringSoon.valueAtRisk)}</div>
-                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">Within ${health.expiringSoon.alertWindowDays} days · ${health.expiringSoon.batchCount} batch(es)</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">Ndani ya siku ${health.expiringSoon.alertWindowDays} · ${health.expiringSoon.batchCount} batch(z)</div>
                     </div>
                     <div class="kpi-card" style="box-shadow:none; border-color:var(--surface-2);">
-                        <div class="kpi-label">Lifetime Stock Loss</div>
+                        <div class="kpi-label">Hasara ya Hisa ya Maisha yote</div>
                         <div class="kpi-value" style="font-size:20px;">${formatMoney(health.lifetimeStockLoss)}</div>
-                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">All-time damaged + expired</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">Zilizoharibiwa na zilizokwisha muda</div>
                     </div>
                 </div>
                 ${health.pendingExpenses.count > 0 ? `
                 <div style="margin-top:16px; padding:12px 14px; background:var(--accent-blue-bg); border-radius:var(--radius-sm); font-size:12.5px; color:var(--accent-blue); display:flex; justify-content:space-between; align-items:center;">
-                    <span>📝 ${health.pendingExpenses.count} expense(s) awaiting your approval</span>
+                    <span>📝 ${health.pendingExpenses.count} matumizi yanasubiri uidhinishaji wako</span>
                     <strong>${formatMoney(health.pendingExpenses.total)}</strong>
                 </div>` : ''}
                 ${health.noStockProducts && health.noStockProducts.length > 0 ? `
                 <div style="margin-top:12px; padding:12px 14px; background:var(--accent-amber-bg); border-radius:var(--radius-sm); font-size:12.5px; color:var(--accent-amber);">
                     <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none';">
-                        <span>⚠ ${health.noStockProducts.length} product(s) have <strong>zero stock</strong> and won't appear in POS</span>
-                        <span style="font-size:11px;">tap to view ▾</span>
+                        <span>⚠ ${health.noStockProducts.length} bidhaa zina <strong>hisa sifuri</strong> na hazitaonekana kwenye POS</span>
+                        <span style="font-size:11px;">gusa kuona ▾</span>
                     </div>
                     <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid rgba(180,83,9,0.2);">
                         ${health.noStockProducts.map(p => `
@@ -225,7 +225,7 @@ function renderBusinessHealthPanel(health) {
                                 <span>${escapeHtml(p.name)} <span style="color:var(--text-muted);">(${escapeHtml(p.product_code)})</span></span>
                             </div>
                         `).join('')}
-                        <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="navigateTo('products')">Go Add Stock →</button>
+                        <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="navigateTo('products')">Nenda Kuweka Hisa →</button>
                     </div>
                 </div>` : ''}
             </div>
@@ -239,7 +239,7 @@ async function renderTrendChart() {
         const res = await Api.salesTrend(30);
         const trend = res.trend;
         if (trend.length === 0) {
-            holder.innerHTML = `<div class="empty-state"><div class="icon">📈</div><p>No sales recorded yet in this period.</p></div>`;
+            holder.innerHTML = `<div class="empty-state"><div class="icon">📈</div><p>Hakuna mauzo yaliyoandikwa bado katika kipindi hiki.</p></div>`;
             return;
         }
         const max = Math.max(...trend.map(t => parseFloat(t.revenue)), 1);
@@ -254,7 +254,7 @@ async function renderTrendChart() {
                 <span>${formatDate(trend[0].date)}</span><span>${formatDate(trend[trend.length-1].date)}</span>
             </div>`;
     } catch (err) {
-        holder.innerHTML = `<p style="color:var(--text-muted);font-size:13px;">Could not load trend data.</p>`;
+        holder.innerHTML = `<p style="color:var(--text-muted);font-size:13px;">Imeshindikana kupakia data ya mwenendo.</p>`;
     }
 }
 
@@ -264,7 +264,7 @@ async function renderTopProducts() {
         const res = await Api.topProducts(8);
         const items = res.topProducts;
         if (items.length === 0) {
-            holder.innerHTML = `<div class="empty-state"><div class="icon">📦</div><p>No sales data yet.</p></div>`;
+            holder.innerHTML = `<div class="empty-state"><div class="icon">📦</div><p>Hakuna data ya mauzo bado.</p></div>`;
             return;
         }
         holder.innerHTML = `
@@ -282,7 +282,7 @@ async function renderTopProducts() {
             </table>
         `;
     } catch (err) {
-        holder.innerHTML = `<p style="color:var(--text-muted);font-size:13px;">Could not load top products.</p>`;
+        holder.innerHTML = `<p style="color:var(--text-muted);font-size:13px;">Imeshindikana kupakia bidhaa zilizouzwa sana.</p>`;
     }
 }
 
@@ -293,9 +293,9 @@ async function renderNotificationsPage(container) {
         const items = res.notifications;
         container.innerHTML = `
             <div class="card">
-                <div class="card-header"><h3>Notifications</h3></div>
+                <div class="card-header"><h3>Arifa</h3></div>
                 <div class="card-body" style="padding:0;">
-                    ${items.length === 0 ? `<div class="empty-state"><div class="icon">🔔</div><p>No notifications yet.</p></div>` :
+                    ${items.length === 0 ? `<div class="empty-state"><div class="icon">🔔</div><p>Hakuna arifa bado.</p></div>` :
                         items.map(n => `
                             <div style="display:flex; gap:14px; padding:16px 22px; border-bottom:1px solid var(--surface-1);">
                                 <div style="width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;background:${n.severity === 'critical' ? 'var(--accent-red)' : n.severity === 'warning' ? 'var(--accent-amber)' : 'var(--accent-blue)'}"></div>
@@ -310,6 +310,6 @@ async function renderNotificationsPage(container) {
             </div>
         `;
     } catch (err) {
-        container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load notifications.</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Imeshindikana kupakia arifa.</p></div>`;
     }
 }

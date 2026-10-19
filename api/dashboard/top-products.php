@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../config/bootstrap.php';
 requireAuth();
 $pdo = getDB();
 
-$limit = (int)($_GET['limit'] ?? 10);
+$limit = max(1, min(50, (int)($_GET['limit'] ?? 10)));
 
 $stmt = $pdo->prepare(
     "SELECT p.id, p.name, p.product_code,
